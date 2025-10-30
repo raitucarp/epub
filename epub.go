@@ -6,6 +6,8 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+// Epub represents a full EPUB publication, including
+// metadata, package information, resources, and navigation.
 type Epub struct {
 	packagePubs              map[string]*pkg.Package
 	packagePaths             map[string]string

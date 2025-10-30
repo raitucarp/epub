@@ -8,6 +8,7 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+// UID returns the unique identifier of the publication.
 func (r *Reader) UID() (identifier string) {
 	for _, uid := range r.CurrentSelectedPackage().Metadata.Identifiers {
 		identifier = uid.Value
@@ -15,12 +16,14 @@ func (r *Reader) UID() (identifier string) {
 	return
 }
 
+// Version returns the EPUB specification version of the publication.
 func (r *Reader) Version() (version string) {
 	return r.CurrentSelectedPackage().Version
 }
 
 var coverImagePattern = regexp.MustCompile("cover")
 
+// Cover returns the publication's cover image if present.
 func (r *Reader) Cover() (cover *image.Image) {
 	metadata := r.Metadata()
 	resources := r.Resources()
@@ -74,6 +77,7 @@ func (r *Reader) Cover() (cover *image.Image) {
 
 var titlePattern = regexp.MustCompile("title")
 
+// Title returns the publication's title metadata.
 func (r *Reader) Title() (title string) {
 	for key, value := range r.Metadata() {
 		if key == "title" {
@@ -119,6 +123,7 @@ func (r *Reader) Title() (title string) {
 	return
 }
 
+// Author returns the author (creator) metadata of the publication.
 func (r *Reader) Author() (author string) {
 	for key, value := range r.Metadata() {
 		if key == "creator" {
@@ -159,6 +164,7 @@ func (r *Reader) Author() (author string) {
 
 var descriptionPattern = regexp.MustCompile("description")
 
+// Description returns the publication's description metadata if defined.
 func (r *Reader) Description() (description string) {
 	desc, descriptionExists := r.epub.metadata["description"]
 	if descriptionExists {
@@ -200,6 +206,8 @@ func (r *Reader) Description() (description string) {
 	return
 }
 
+// TableOfContents returns the TOC version present (e.g., NAV or NCX).
+// If both exist, behavior depends on publication version and priority rules.
 func (r *Reader) TableOfContents() (version string) {
 	return r.CurrentSelectedPackage().Version
 }

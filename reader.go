@@ -8,6 +8,9 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+// Reader provides an interface for reading and accessing EPUB publication
+// data. It offers methods for retrieving metadata, navigation structures,
+// content documents, resources, and images.
 type Reader struct {
 	epub *Epub
 }
@@ -75,6 +78,8 @@ func (r *Reader) parseRootFiles(z *ocf.OCFZipContainer) (err error) {
 	return nil
 }
 
+// OpenReader opens an EPUB file from the provided file path and returns
+// a Reader instance. The file must exist and be a valid EPUB container.
 func OpenReader(name string) (reader Reader, err error) {
 	zipContainer, err := ocf.OpenReader(name)
 	if err != nil {
@@ -84,6 +89,8 @@ func OpenReader(name string) (reader Reader, err error) {
 	return newReaderFromZip(zipContainer)
 }
 
+// NewReader creates a new Reader instance from a raw EPUB byte slice.
+// The byte slice must represent a valid EPUB container.
 func NewReader(b []byte) (reader Reader, err error) {
 	zipContainer, err := ocf.NewReader(b)
 	if err != nil {

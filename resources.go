@@ -7,6 +7,9 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+// PublicationResource represents a single resource inside the EPUB
+// container. Resources may include XHTML documents, images, stylesheets,
+// SVG files, and auxiliary data referenced by the publication manifest.
 type PublicationResource struct {
 	ID         string
 	Href       string
@@ -42,10 +45,12 @@ func (r *Reader) parseResources() {
 	}
 }
 
+// Resources returns all publication resources declared in the manifest.
 func (r *Reader) Resources() (resources []PublicationResource) {
 	return r.epub.resources
 }
 
+// SelectResourceById retrieves a resource referenced by its manifest ID.
 func (r *Reader) SelectResourceById(id string) (resource *PublicationResource) {
 
 	for _, res := range r.epub.resources {
@@ -56,6 +61,7 @@ func (r *Reader) SelectResourceById(id string) (resource *PublicationResource) {
 	return nil
 }
 
+// SelectResourceByHref retrieves a resource referenced by its manifest href.
 func (r *Reader) SelectResourceByHref(href string) (resource *PublicationResource) {
 
 	for _, res := range r.epub.resources {

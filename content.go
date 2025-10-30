@@ -21,15 +21,21 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// SelectPackageRendition changes the active package rendition by its
+// rendition identifier. Useful when multiple reading layouts are available.
 func (r *Reader) SelectPackageRendition(rendition string) {
 	r.epub.rendition = rendition
 	r.parseResources()
 }
 
+// CurrentSelectedPackage returns the currently active package rendition.
+// EPUB publications may have multiple renditions.
 func (r *Reader) CurrentSelectedPackage() *pkg.Package {
 	return r.epub.packagePubs[r.epub.rendition]
 }
 
+// CurrentSelectedPackagePath returns the internal path to the currently
+// selected package document.
 func (r *Reader) CurrentSelectedPackagePath() string {
 	return r.epub.packagePaths[r.epub.rendition]
 }
@@ -41,6 +47,8 @@ func (r *Reader) parseHTML(htmlByte []byte) (node *html.Node, err error) {
 	return
 }
 
+// ListContentDocumentIds returns the IDs of all content documents
+// (XHTML/SVG) registered in the publication manifest.
 func (r *Reader) ListContentDocumentIds() (ids []string) {
 	for _, res := range r.Resources() {
 		if res.MIMEType == pkg.MediaTypeXHTML {
@@ -51,6 +59,8 @@ func (r *Reader) ListContentDocumentIds() (ids []string) {
 	return
 }
 
+// ListImageIds returns the IDs of all image-based resources
+// (e.g., PNG, JPEG, SVG) in the publication manifest.
 func (r *Reader) ListImageIds() (ids []string) {
 	mimes := []string{pkg.MediaTypeJPEG, pkg.MediaTypePNG, pkg.MediaTypeSVG, pkg.MediaTypeGIF, pkg.MediaTypeWebP}
 	for _, res := range r.Resources() {
@@ -62,6 +72,8 @@ func (r *Reader) ListImageIds() (ids []string) {
 	return
 }
 
+// ContentDocumentXHTML returns XHTML content documents parsed into html.Node trees.
+// The returned map is keyed by EPUB manifest item ID.
 func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node) {
 	documents = make(map[string]*html.Node)
 
@@ -78,6 +90,8 @@ func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node) {
 	return
 }
 
+// ContentDocumentXHTMLString returns XHTML content documents as raw strings.
+// The returned map is keyed by EPUB manifest item ID.
 func (r *Reader) ContentDocumentXHTMLString() (documents map[string]string) {
 	resourcesHtml := r.ContentDocumentXHTML()
 	documents = make(map[string]string)
@@ -134,6 +148,8 @@ func getTextByEpubType(node *html.Node, attributeValue string) (text string) {
 	return
 }
 
+// ContentDocumentMarkdown returns content documents converted into Markdown
+// form. The returned map is keyed by EPUB manifest item ID.
 func (r *Reader) ContentDocumentMarkdown() (documents map[string]string) {
 	resourcesHtml := r.ContentDocumentXHTML()
 	documents = make(map[string]string)
@@ -161,6 +177,8 @@ title: %#v
 	return
 }
 
+// ReadContentHTMLById returns the XHTML/HTML content document associated
+// with the given manifest ID, parsed into an html.Node tree.
 func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
 	resourcesHtml := r.ContentDocumentXHTML()
 	for resId, res := range resourcesHtml {
@@ -171,6 +189,8 @@ func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
 	return
 }
 
+// ReadContentMarkdownById returns a Markdown string representation of the
+// content document associated with the given manifest ID.
 func (r *Reader) ReadContentMarkdownById(id string) (md string) {
 	resourcesMd := r.ContentDocumentMarkdown()
 	for resId, res := range resourcesMd {
@@ -181,6 +201,8 @@ func (r *Reader) ReadContentMarkdownById(id string) (md string) {
 	return
 }
 
+// ReadImageById returns the image resource associated with the given
+// manifest ID.
 func (r *Reader) ReadImageById(id string) (img *image.Image) {
 
 	for _, res := range r.epub.resources {
@@ -194,6 +216,8 @@ func (r *Reader) ReadImageById(id string) (img *image.Image) {
 	return
 }
 
+// ReadImageByHref returns the image resource referenced by the given href,
+// if present in the manifest.
 func (r *Reader) ReadImageByHref(href string) (img *image.Image) {
 
 	for _, res := range r.epub.resources {
@@ -207,6 +231,8 @@ func (r *Reader) ReadImageByHref(href string) (img *image.Image) {
 	return
 }
 
+// ContentDocumentSVG returns SVG content documents parsed into html.Node trees.
+// The returned map is keyed by EPUB manifest item ID.
 func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node) {
 	documents = make(map[string]*html.Node)
 
@@ -223,6 +249,7 @@ func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node) {
 	return
 }
 
+// Images returns all image resources in the publication, keyed by manifest ID.
 func (r *Reader) Images() (images map[string]image.Image) {
 	images = make(map[string]image.Image)
 
@@ -312,10 +339,14 @@ func (r *Reader) parseMetadata() {
 
 }
 
+// Metadata returns the complete metadata block of the publication.
+// The returned map may include standard as well as extended metadata fields.
 func (r *Reader) Metadata() (metadata map[string]any) {
 	return r.epub.metadata
 }
 
+// Refines returns metadata refinement relationships. The returned map is
+// keyed by subject identifier, mapping to properties and their assigned values.
 func (r *Reader) Refines() (refines map[string]map[string][]string) {
 	refines = make(map[string]map[string][]string)
 	packageMetadata := r.CurrentSelectedPackage().Metadata
@@ -403,6 +434,8 @@ func (r *Reader) Refines() (refines map[string]map[string][]string) {
 	return
 }
 
+// NavigationCenterExtended returns the NCX navigation document (if available).
+// This is primarily used for EPUB 2.x backward compatibility.
 func (r *Reader) NavigationCenterExtended() *ncx.NCX {
 	return r.epub.navigationCenterEXtended
 }
