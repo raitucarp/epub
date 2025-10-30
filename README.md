@@ -97,7 +97,7 @@ func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node)
 func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node)
 func (r *Reader) ContentDocumentXHTMLString() (documents map[string]string)
 func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node)
-func (r *Reader) ReadContentMarkdownId(id string) (md string)
+func (r *Reader) ReadContentMarkdownById(id string) (md string)
 ```
 
 ### Images

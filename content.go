@@ -150,7 +150,7 @@ func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
 	return
 }
 
-func (r *Reader) ReadContentMarkdownId(id string) (md string) {
+func (r *Reader) ReadContentMarkdownById(id string) (md string) {
 	resourcesMd := r.ContentDocumentMarkdown()
 	for resId, res := range resourcesMd {
 		if resId == id {
