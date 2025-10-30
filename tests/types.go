@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"log"
 	"path"
 	"testing"
 
@@ -97,7 +96,5 @@ func (data *epubData) test() func(t *testing.T) {
 				t.Errorf("XHTML Contents mismatch count actual %d, expected %d", actual, expected)
 			}
 		})
-
-		log.Println(epub.UID())
 	}
 }
