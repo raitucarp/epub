@@ -41,6 +41,27 @@ func (r *Reader) parseHTML(htmlByte []byte) (node *html.Node, err error) {
 	return
 }
 
+func (r *Reader) ListContentDocumentIds() (ids []string) {
+	for _, res := range r.Resources() {
+		if res.MIMEType == pkg.MediaTypeXHTML {
+			ids = append(ids, res.ID)
+		}
+	}
+
+	return
+}
+
+func (r *Reader) ListImageIds() (ids []string) {
+	mimes := []string{pkg.MediaTypeJPEG, pkg.MediaTypePNG, pkg.MediaTypeSVG, pkg.MediaTypeGIF, pkg.MediaTypeWebP}
+	for _, res := range r.Resources() {
+		if slices.Contains(mimes, res.MIMEType) {
+			ids = append(ids, res.ID)
+		}
+	}
+
+	return
+}
+
 func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node) {
 	documents = make(map[string]*html.Node)
 
