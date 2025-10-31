@@ -205,27 +205,3 @@ func (r *Reader) Description() (description string) {
 
 	return
 }
-
-// TableOfContents returns the TOC version present (e.g., NAV or NCX).
-// If both exist, behavior depends on publication version and priority rules.
-func (r *Reader) TableOfContents() (version string) {
-	return r.CurrentSelectedPackage().Version
-}
-
-// cover	the book cover(s), jacket information, etc.
-// title-page	page with possibly title, author, publisher, and other metadata
-// toc	table of contents
-// index	back-of-book style index
-// glossary
-// acknowledgements
-// bibliography
-// colophon
-// copyright-page
-// dedication
-// epigraph
-// foreword
-// loi	list of illustrations
-// lot	list of tables
-// notes
-// preface
-// text	First "real" page of content (e.g. "Chapter 1")
