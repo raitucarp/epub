@@ -189,6 +189,21 @@ func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
 	return
 }
 
+// ReadContentHTMLByHref returns the content document associated with the given
+// manifest href. The returned document is parsed into an html.Node tree.
+func (r *Reader) ReadContentHTMLByHref(href string) (doc *html.Node) {
+	contentIndex := slices.IndexFunc(r.epub.resources, func(r PublicationResource) bool {
+		return r.Href == href
+	})
+
+	if contentIndex > -1 {
+		res := r.epub.resources[contentIndex]
+		return r.ReadContentHTMLById(res.ID)
+	}
+
+	return
+}
+
 // ReadContentMarkdownById returns a Markdown string representation of the
 // content document associated with the given manifest ID.
 func (r *Reader) ReadContentMarkdownById(id string) (md string) {
