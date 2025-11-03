@@ -39,6 +39,7 @@ type TextElement struct {
 
 // NavMap represents the main navigation map
 type NavMap struct {
+	ID        string     `xml:"id,attr"`
 	NavPoints []NavPoint `xml:"navPoint"`
 }
 

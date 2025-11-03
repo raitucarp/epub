@@ -3,6 +3,7 @@ package ocf
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 )
 
 func newContainerAndParse(file *zip.Reader) (container *OCFZipContainer, err error) {
@@ -16,6 +17,11 @@ func newContainerAndParse(file *zip.Reader) (container *OCFZipContainer, err err
 	if err != nil {
 		return
 	}
+
+	if container.MimeType() != MimeType {
+		return nil, errors.New("Mimetype mismatch")
+	}
+
 	return container, nil
 }
 

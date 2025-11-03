@@ -286,8 +286,24 @@ func (r *Reader) Images() (images map[string]image.Image) {
 	return
 }
 
-func (r *Reader) Spine() (orderedResources []PublicationResource) {
+// ImageBytes returns all image resources in the publication, keyed by manifest ID.
+func (r *Reader) ImageResources() (images map[string][]byte) {
+	images = make(map[string][]byte)
 
+	for _, res := range r.epub.resources {
+		if res.MIMEType == pkg.MediaTypeJPEG ||
+			res.MIMEType == pkg.MediaTypePNG ||
+			res.MIMEType == pkg.MediaTypeGIF ||
+			res.MIMEType == pkg.MediaTypeWebP {
+
+			images[res.ID] = res.Content
+		}
+	}
+	return
+}
+
+// Spine returns publication's spines, ordered resources like table of contents.
+func (r *Reader) Spine() (orderedResources []PublicationResource) {
 	for _, item := range r.CurrentSelectedPackage().Spine.ItemRefs {
 		for _, res := range r.epub.resources {
 			if item.IDRef == res.ID {

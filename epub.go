@@ -17,3 +17,15 @@ type Epub struct {
 	metadata                 map[string]any
 	navigationCenterEXtended *ncx.NCX
 }
+
+func (epub *Epub) SelectPackage(name string) *pkg.Package {
+	return epub.packagePubs[name]
+}
+
+func (epub *Epub) SelectedPackage() *pkg.Package {
+	return epub.packagePubs[epub.rendition]
+}
+
+func (epub *Epub) DefaultPackage() *pkg.Package {
+	return epub.packagePubs["content"]
+}

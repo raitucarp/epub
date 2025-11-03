@@ -16,7 +16,7 @@ type PublicationResource struct {
 	MIMEType   string
 	Content    []byte
 	Filepath   string
-	Properties string
+	Properties pkg.ManifestProperty
 }
 
 func (r *Reader) parseResources() {

@@ -9,6 +9,9 @@ import (
 	"slices"
 )
 
+const MimeType = "application/epub+zip"
+const EPUBContainerMime = "application/oebps-package+xml"
+
 type OCFZipContainer struct {
 	files   map[string][]byte
 	metaInf MetaInf

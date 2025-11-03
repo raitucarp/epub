@@ -1,7 +1,10 @@
 package epub
 
 import (
+	"bytes"
 	"image"
+	"image/jpeg"
+	"image/png"
 	"regexp"
 	"strings"
 
@@ -45,7 +48,7 @@ func (r *Reader) Cover() (cover *image.Image) {
 	}
 
 	for _, res := range resources {
-		if coverImagePattern.MatchString(res.Properties) || coverImagePattern.MatchString(res.ID) {
+		if coverImagePattern.MatchString(string(res.Properties)) || coverImagePattern.MatchString(res.ID) {
 			cover = r.ReadImageById(res.ID)
 		}
 	}
@@ -55,7 +58,7 @@ func (r *Reader) Cover() (cover *image.Image) {
 	}
 
 	for _, item := range r.Spine() {
-		if coverImagePattern.MatchString(item.Properties) || coverImagePattern.MatchString(item.ID) {
+		if coverImagePattern.MatchString(string(item.Properties)) || coverImagePattern.MatchString(item.ID) {
 			cover = r.ReadImageById(item.ID)
 		}
 	}
@@ -73,6 +76,24 @@ func (r *Reader) Cover() (cover *image.Image) {
 	}
 
 	return
+}
+
+func (r *Reader) CoverBytes() (cover []byte, err error) {
+	coverImage := r.Cover()
+
+	buf := new(bytes.Buffer)
+
+	err = png.Encode(buf, *coverImage)
+	if err == nil {
+		return buf.Bytes(), err
+	}
+
+	err = jpeg.Encode(buf, *coverImage, &jpeg.Options{Quality: 70})
+	if err == nil {
+		return buf.Bytes(), err
+	}
+
+	return nil, err
 }
 
 var titlePattern = regexp.MustCompile("title")
@@ -160,6 +181,26 @@ func (r *Reader) Author() (author string) {
 	}
 
 	return "Anonymous"
+}
+
+// Language returns the publication's language metadata.
+func (r *Reader) Language() (language string) {
+	desc, descriptionExists := r.epub.metadata["language"]
+	if descriptionExists {
+		language = strings.Join(desc.([]string), ", ")
+		return
+	}
+	return
+}
+
+// Identifier returns the publication's identifier.
+func (r *Reader) Identifier() (identifier string) {
+	desc, descriptionExists := r.epub.metadata["identifier"]
+	if descriptionExists {
+		identifier = strings.Join(desc.([]string), ", ")
+		return
+	}
+	return
 }
 
 var descriptionPattern = regexp.MustCompile("description")

@@ -25,9 +25,9 @@ type Package struct {
 // Metadata represents the metadata section
 type Metadata struct {
 	XMLName     xml.Name       `xml:"metadata"`
-	Identifiers []DCIdentifier `xml:"http://purl.org/dc/elements/1.1/ identifier"`
-	Titles      []DCTitle      `xml:"http://purl.org/dc/elements/1.1/ title"`
-	Languages   []DCLanguage   `xml:"http://purl.org/dc/elements/1.1/ language"`
+	Identifiers []DCIdentifier `xml:"dc:identifier"`
+	Titles      []DCTitle      `xml:"dc:title"`
+	Languages   []DCLanguage   `xml:"dc:language"`
 	OptionalDC  []DCOptional   `xml:",any"`
 	Meta        []Meta         `xml:"meta"`
 	Links       []Link         `xml:"link,omitempty"`
@@ -35,14 +35,14 @@ type Metadata struct {
 
 // DCIdentifier represents dc:identifier element
 type DCIdentifier struct {
-	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ identifier"`
+	XMLName xml.Name `xml:"dc:identifier"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Value   string   `xml:",chardata"`
 }
 
 // DCTitle represents dc:title element
 type DCTitle struct {
-	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ title"`
+	XMLName xml.Name `xml:"dc:title"`
 	Dir     string   `xml:"dir,attr,omitempty"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Lang    string   `xml:"xml lang,attr,omitempty"`
@@ -51,7 +51,7 @@ type DCTitle struct {
 
 // DCLanguage represents dc:language element
 type DCLanguage struct {
-	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ language"`
+	XMLName xml.Name `xml:"dc:language"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Value   string   `xml:",chardata"`
 }
@@ -72,7 +72,7 @@ type Meta struct {
 	Content  string   `xml:"content,attr,omitempty"`
 	Dir      string   `xml:"dir,attr,omitempty"`
 	ID       string   `xml:"id,attr,omitempty"`
-	Property string   `xml:"property,attr"`
+	Property string   `xml:"property,attr,omitempty"`
 	Refines  string   `xml:"refines,attr,omitempty"`
 	Scheme   string   `xml:"scheme,attr,omitempty"`
 	Lang     string   `xml:"xml lang,attr,omitempty"`
@@ -98,15 +98,28 @@ type Manifest struct {
 	Items   []Item   `xml:"item"`
 }
 
+type ManifestProperty string
+
+const (
+	NotProperty            ManifestProperty = ""
+	CoverImageProperty     ManifestProperty = "cover-image"
+	MathMLProperty         ManifestProperty = "mathml"
+	NavProperty            ManifestProperty = "nav"
+	RemoteResourceProperty ManifestProperty = "remote-resources"
+	ScriptedProperty       ManifestProperty = "scripted"
+	SvgProperty            ManifestProperty = "svg"
+	SwitchProperty         ManifestProperty = "switch"
+)
+
 // Item represents a publication resource in the manifest
 type Item struct {
-	XMLName      xml.Name `xml:"item"`
-	Fallback     string   `xml:"fallback,attr,omitempty"`
-	Href         string   `xml:"href,attr"`
-	ID           string   `xml:"id,attr"`
-	MediaOverlay string   `xml:"media-overlay,attr,omitempty"`
-	MediaType    string   `xml:"media-type,attr"`
-	Properties   string   `xml:"properties,attr,omitempty"`
+	XMLName      xml.Name         `xml:"item"`
+	Fallback     string           `xml:"fallback,attr,omitempty"`
+	Href         string           `xml:"href,attr"`
+	ID           string           `xml:"id,attr"`
+	MediaOverlay string           `xml:"media-overlay,attr,omitempty"`
+	MediaType    string           `xml:"media-type,attr"`
+	Properties   ManifestProperty `xml:"properties,attr,omitempty"`
 }
 
 // Spine represents the spine section
