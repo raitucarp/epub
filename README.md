@@ -1,178 +1,144 @@
 # Go EPUB Library
 
-This repository provides a Go (Golang) library for reading and writing EPUB publications. The implementation follows the EPUB 3.3 specification and associated resource processing guidelines as defined by the W3C:
+A Go library for reading and writing EPUB publications.
+This library follows the EPUB 3.3 specification: https://www.w3.org/TR/epub-33/
 
-[https://www.w3.org/TR/epub-33/](https://www.w3.org/TR/epub-33/)
-
-The library offers functionality for parsing EPUB containers, extracting metadata, navigating publication resources, reading content documents (XHTML, SVG, Markdown), retrieving images, and working with package renditions.
+[![Go Reference](https://pkg.go.dev/badge/github.com/raitucarp/epub.svg)](https://pkg.go.dev/github.com/raitucarp/epub)
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/raitucarp)
 
 ---
 
 ## Features
 
-* Reads EPUB files from disk or byte slices.
-* Supports multiple package renditions.
-* Extracts metadata such as title, author, and description.
-* Provides navigation document and NCX access.
-* Reads XHTML, SVG, and derived Markdown representations of content.
-* Extracts embedded images and publication resources.
-* Allows selecting resources by ID or href.
-* Provides access to spine ordering and reading order contents.
+- Parse EPUB 3.3 container, metadata, manifest, spine, guide, and navigation structures.
+- Read content documents in:
+  - XHTML
+  - Markdown (auto-converted)
+  - SVG
+- Extract images in raw bytes or `image.Image`.
+- Access package-level metadata and renditions.
+- Generate new EPUB files programmatically.
 
 ---
 
 ## Installation
 
-```bash
-go get github.com/yourusername/go-epub
+```
+go get github.com/yourusername/epub
 ```
 
 ---
 
-## Basic Usage
+## Quick Start (Reading)
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"github.com/yourusername/epub"
+)
+
+func main() {
+	r, err := epub.OpenReader("example.epub")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Title:", r.Title())
+	fmt.Println("Author:", r.Author())
+	fmt.Println("Language:", r.Language())
+
+	ids := r.ListContentDocumentIds()
+	for _, id := range ids {
+		html := r.ReadContentHTMLById(id)
+		fmt.Printf("HTML Node for %s: %v\n", id, html)
+	}
+}
+```
+
+---
+
+## Quick Start (Writing)
 
 ```go
 package main
 
 import (
 	"log"
-	"path"
-	"github.com/yourusername/go-epub"
+	"time"
+	"github.com/yourusername/epub"
 )
 
 func main() {
-	reader, err := epub.OpenReader(path.Join("books", "example.epub"))
-	if err != nil {
-		log.Fatalf("failed to open epub: %v", err)
-	}
+	w := epub.New("pub-id-001")
+	w.Title("Example Book")
+	w.Author("John Doe")
+	w.Language("en")
+	w.Date(time.Now())
 
-	title := reader.Title()
-	author := reader.Author()
-	mdDocs := reader.ContentDocumentMarkdown()
-
-	log.Printf("Title: %s", title)
-	log.Printf("Author: %s", author)
-	for id, doc := range mdDocs {
-		log.Printf("Document [%s]: %s", id, doc)
-	}
+	w.AddContent("chapter1.xhtml", []byte(`<html><body><h1>Hello World</h1></body></html>`))
+	w.Write("output.epub")
 }
 ```
 
 ---
 
-## API Overview
-
-### Types
-
-```
-type Epub
-type PublicationResource
-type Reader
-type Writer
-```
-
-### Reader Construction
+## Reader API Overview
 
 ```go
+type Reader
+
 func NewReader(b []byte) (reader Reader, err error)
 func OpenReader(name string) (reader Reader, err error)
-```
 
-### Metadata and Publication Info
+func (r *Reader) Title() string
+func (r *Reader) Author() string
+func (r *Reader) Identifier() string
+func (r *Reader) Language() string
+func (r *Reader) Metadata() map[string]any
 
-```go
-func (r *Reader) Title() (title string)
-func (r *Reader) Author() (author string)
-func (r *Reader) Description() (description string)
-func (r *Reader) UID() (identifier string)
-func (r *Reader) Version() (version string)
-func (r *Reader) Metadata() (metadata map[string]any)
-```
+func (r *Reader) ListContentDocumentIds() []string
+func (r *Reader) ListImageIds() []string
 
-### Content Documents
+func (r *Reader) ReadContentHTMLById(id string) *html.Node
+func (r *Reader) ReadContentMarkdownById(id string) string
 
-```go
-func (r *Reader) ContentDocumentMarkdown() (documents map[string]string)
-func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node)
-func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node)
-func (r *Reader) ContentDocumentXHTMLString() (documents map[string]string)
-func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node)
-func (r *Reader) ReadContentMarkdownById(id string) (md string)
-```
+func (r *Reader) ReadImageById(id string) *image.Image
+func (r *Reader) ImageResources() map[string][]byte
 
-### Images
+func (r *Reader) Spine() []PublicationResource
+func (r *Reader) Resources() []PublicationResource
 
-```go
-func (r *Reader) Cover() (cover *image.Image)
-func (r *Reader) Images() (images map[string]image.Image)
-func (r *Reader) ReadImageByHref(href string) (img *image.Image)
-func (r *Reader) ReadImageById(id string) (img *image.Image)
-```
-
-### Navigation and Structure
-
-```go
-func (r *Reader) NavigationCenterExtended() *ncx.NCX
-func (r *Reader) TableOfContents() (version string)
-func (r *Reader) Spine() (orderedResources []PublicationResource)
-func (r *Reader) Resources() (resources []PublicationResource)
-func (r *Reader) Refines() (refines map[string]map[string][]string)
-```
-
-### Package and Resource Selection
-
-```go
-func (r *Reader) CurrentSelectedPackage() *pkg.Package
-func (r *Reader) CurrentSelectedPackagePath() string
-func (r *Reader) SelectPackageRendition(rendition string)
-func (r *Reader) SelectResourceByHref(href string) (resource *PublicationResource)
-func (r *Reader) SelectResourceById(id string) (resource *PublicationResource)
+func (r *Reader) TableOfContents() (TOC, error)
 ```
 
 ---
 
-## Writer API
-
-The `Writer` type is intended for constructing and exporting EPUB files. Documentation and usage examples will be expanded more soon.
-
----
-
-## Example
+## Writer API Overview
 
 ```go
-epub, err := epub.OpenReader(path.Join(epubPath, data.name))
-if err != nil {
-	t.Errorf("Something error %s", err)
-	return
-}
+type Writer
+
+func New(pubId string) *Writer
+
+func (w *Writer) Title(...string)
+func (w *Writer) Author(string)
+func (w *Writer) Languages(...string)
+func (w *Writer) Date(time.Time)
+func (w *Writer) Description(string)
+func (w *Writer) Publisher(string)
+
+func (w *Writer) AddContent(filename string, content []byte) PublicationResource
+func (w *Writer) AddImage(name string, content []byte) PublicationResource
+func (w *Writer) AddSpineItem(res PublicationResource)
+
+func (w *Writer) Write(filename string) error
 ```
 
 ---
 
-## Status
+## License
 
-This project is under active development. Interfaces and behavior may change. Contributions, feedback, and issue reports are welcome.
-
-## LICENSE
-
-MIT License
-
-Copyright (c) 2025 Ribhararnus Pracutiar
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+MIT License.
