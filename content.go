@@ -286,7 +286,8 @@ func (r *Reader) Images() (images map[string]image.Image) {
 	return
 }
 
-// ImageBytes returns all image resources in the publication, keyed by manifest ID.
+// ImageResources returns all image resources in byte form, keyed by
+// manifest ID. Useful when direct decoding to image.Image is not required.
 func (r *Reader) ImageResources() (images map[string][]byte) {
 	images = make(map[string][]byte)
 
