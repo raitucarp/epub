@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -280,6 +281,61 @@ func extractDescriptionFromEpubType(epubType string, htmlNode *html.Node) (descr
 	return
 }
 
+func (r *Reader) extractDescriptionFromSpine() (description string) {
+	spine := r.Spine()
+	introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
+	for _, res := range spine {
+		htmlNode := r.ReadContentHTMLByHref(res.Href)
+
+		for _, introType := range introTypes {
+			if description == "" {
+				description = extractDescriptionFromEpubType(introType, htmlNode)
+			}
+		}
+	}
+
+	return
+}
+
+func getBody(doc *html.Node) *html.Node {
+	var body *html.Node
+	var findBody func(*html.Node)
+
+	findBody = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "body" {
+			body = n
+			return
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			findBody(c)
+		}
+	}
+
+	findBody(doc)
+	return body
+}
+
+func (r *Reader) extractDescriptionFromReferences() (description string) {
+	refs := r.References()
+
+	candidates := []pkg.GuideReferenceType{pkg.GuideRefText, pkg.GuideRefPreface, pkg.GuideRefForeword}
+
+	for _, candidate := range candidates {
+		if description != "" {
+			continue
+		}
+
+		if doc, ok := refs[candidate]; ok {
+			body := getBody(doc)
+
+			markdownBody, _ := htmltomarkdown.ConvertNode(body)
+			description = string(markdownBody)
+		}
+	}
+
+	return
+}
+
 // Description returns the publication's description metadata if defined.
 func (r *Reader) Description() (description string) {
 	metadata := r.epub.metadata
@@ -290,19 +346,21 @@ func (r *Reader) Description() (description string) {
 	}
 
 	if description == "" {
-		spine := r.Spine()
-		introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
-		for _, res := range spine {
-			htmlNode := r.ReadContentHTMLByHref(res.Href)
-
-			for _, introType := range introTypes {
-				if description == "" {
-					description = extractDescriptionFromEpubType(introType, htmlNode)
-				}
-			}
-		}
+		description = r.extractDescriptionFromSpine()
 	}
 
+	if description == "" {
+		description = r.extractDescriptionFromReferences()
+	}
+
+	if description != "" {
+		descriptionTemp := description
+		newDesc, err := htmltomarkdown.ConvertString(description)
+		if err != nil {
+			description = descriptionTemp
+		}
+		description = newDesc
+	}
 	return
 }
 
@@ -312,7 +370,18 @@ func (r *Reader) Description() (description string) {
 func (r *Reader) References() (references map[pkg.GuideReferenceType]*html.Node) {
 	references = make(map[pkg.GuideReferenceType]*html.Node)
 	for _, ref := range r.epub.SelectedPackage().Guide.References {
-		content := r.ReadContentHTMLByHref(ref.Href)
+
+		u, err := url.Parse(ref.Href)
+		if err != nil {
+			continue
+		}
+
+		// Remove the fragment by setting it to empty string
+		u.Fragment = ""
+
+		// Get the string representation without fragment
+		cleanHref := u.String()
+		content := r.ReadContentHTMLByHref(cleanHref)
 		references[ref.Type] = content
 	}
 
