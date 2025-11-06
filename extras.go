@@ -6,9 +6,12 @@ import (
 	"image/jpeg"
 	"image/png"
 	"regexp"
+	"slices"
 	"strings"
 
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/raitucarp/epub/pkg"
+	"golang.org/x/net/html"
 )
 
 // UID returns the unique identifier of the publication.
@@ -26,11 +29,8 @@ func (r *Reader) Version() (version string) {
 
 var coverImagePattern = regexp.MustCompile("cover")
 
-// Cover returns the publication's cover image if present.
-func (r *Reader) Cover() (cover *image.Image) {
+func (r *Reader) getCoverInMetadata() (cover *image.Image) {
 	metadata := r.Metadata()
-	resources := r.Resources()
-
 	if meta, ok := metadata["meta"]; ok {
 		metaMap, ok := meta.(map[string]any)
 
@@ -47,37 +47,51 @@ func (r *Reader) Cover() (cover *image.Image) {
 		return
 	}
 
+	return
+}
+
+func (r *Reader) getCoverInResources() (cover *image.Image) {
+	resources := r.Resources()
 	for _, res := range resources {
-		if coverImagePattern.MatchString(string(res.Properties)) || coverImagePattern.MatchString(res.ID) {
-			cover = r.ReadImageById(res.ID)
+		if res.Properties == pkg.CoverImageProperty {
+			cover = r.ReadImageByHref(res.Href)
 		}
-	}
-
-	if cover != nil {
-		return
-	}
-
-	for _, item := range r.Spine() {
-		if coverImagePattern.MatchString(string(item.Properties)) || coverImagePattern.MatchString(item.ID) {
-			cover = r.ReadImageById(item.ID)
-		}
-	}
-
-	if cover != nil {
-		return
-	}
-
-	for _, guide := range r.CurrentSelectedPackage().Guide.References {
-		if guide.Type != pkg.GuideRefCover {
-			continue
-		}
-
-		cover = r.ReadImageByHref(guide.Href)
 	}
 
 	return
 }
 
+func (r *Reader) getCoverInSpine() (cover *image.Image) {
+	for _, item := range r.Spine() {
+		if !coverImagePattern.MatchString(item.ID) {
+			continue
+		}
+		res := r.SelectResourceById(item.ID)
+		if res != nil {
+			cover = r.ReadImageByHref(res.Href)
+		}
+	}
+
+	return
+}
+
+// Cover returns the publication's cover image if present.
+func (r *Reader) Cover() (cover *image.Image) {
+	cover = r.getCoverInMetadata()
+
+	if cover == nil {
+		cover = r.getCoverInResources()
+	}
+
+	if cover == nil {
+		cover = r.getCoverInSpine()
+	}
+
+	return
+}
+
+// CoverBytes returns the raw byte representation of the cover image.
+// An error is returned if the publication does not define a cover.
 func (r *Reader) CoverBytes() (cover []byte, err error) {
 	coverImage := r.Cover()
 
@@ -183,7 +197,8 @@ func (r *Reader) Author() (author string) {
 	return "Anonymous"
 }
 
-// Language returns the publication's language metadata.
+// Language returns the primary language of the publication, as declared
+// in the package metadata (dc:language).
 func (r *Reader) Language() (language string) {
 	desc, descriptionExists := r.epub.metadata["language"]
 	if descriptionExists {
@@ -193,7 +208,8 @@ func (r *Reader) Language() (language string) {
 	return
 }
 
-// Identifier returns the publication's identifier.
+// Identifier returns the primary identifier of the publication as declared
+// in the package metadata (often equivalent to UID).
 func (r *Reader) Identifier() (identifier string) {
 	desc, descriptionExists := r.epub.metadata["identifier"]
 	if descriptionExists {
@@ -205,15 +221,16 @@ func (r *Reader) Identifier() (identifier string) {
 
 var descriptionPattern = regexp.MustCompile("description")
 
-// Description returns the publication's description metadata if defined.
-func (r *Reader) Description() (description string) {
-	desc, descriptionExists := r.epub.metadata["description"]
+func extractDescriptionFromMetadata(metadata map[string]any) (description string) {
+	desc, descriptionExists := metadata["description"]
 	if descriptionExists {
 		description = strings.Join(desc.([]string), ", ")
-		return
 	}
+	return
+}
 
-	meta, metaExists := r.epub.metadata["meta"]
+func extractDescriptionFromOptionalMeta(metadata map[string]any) (description string) {
+	meta, metaExists := metadata["meta"]
 	if !metaExists {
 		return
 	}
@@ -241,7 +258,62 @@ func (r *Reader) Description() (description string) {
 		}
 
 		description = strings.Join(descriptions, ", ")
-		return
+	}
+
+	return
+}
+
+func extractDescriptionFromEpubType(epubType string, htmlNode *html.Node) (description string) {
+	for desc := range htmlNode.Descendants() {
+		abstractIndex := slices.IndexFunc(desc.Attr, func(attr html.Attribute) bool {
+			return attr.Key == "epub:type" && attr.Val == epubType
+		})
+
+		if abstractIndex > -1 {
+			descByte, err := htmltomarkdown.ConvertNode(desc)
+			if err != nil {
+				continue
+			}
+			description = string(descByte)
+		}
+	}
+	return
+}
+
+// Description returns the publication's description metadata if defined.
+func (r *Reader) Description() (description string) {
+	metadata := r.epub.metadata
+	description = extractDescriptionFromMetadata(metadata)
+
+	if description == "" {
+		description = extractDescriptionFromOptionalMeta(metadata)
+	}
+
+	if description == "" {
+		spine := r.Spine()
+		introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
+		for _, res := range spine {
+			htmlNode := r.ReadContentHTMLByHref(res.Href)
+
+			for _, introType := range introTypes {
+				if description == "" {
+					description = extractDescriptionFromEpubType(introType, htmlNode)
+				}
+			}
+		}
+	}
+
+	return
+}
+
+// References returns the structural guide references defined in the package,
+// such as "cover", "title-page", "toc", etc. The returned map is keyed by
+// reference type and mapped to corresponding HTML content.
+func (r *Reader) References() (references map[pkg.GuideReferenceType]*html.Node) {
+	references = make(map[pkg.GuideReferenceType]*html.Node)
+	for _, ref := range r.epub.SelectedPackage().Guide.References {
+		content := r.ReadContentHTMLByHref(ref.Href)
+		references[ref.Type] = content
 	}
 
 	return
