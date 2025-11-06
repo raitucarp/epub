@@ -30,3 +30,11 @@ const (
 	LinearYes = "yes"
 	LinearNo  = "no"
 )
+
+var ImageMediaTypes = []string{
+	MediaTypeSVG,
+	MediaTypeJPEG,
+	MediaTypeGIF,
+	MediaTypeWebP,
+	MediaTypePNG,
+}
