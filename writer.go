@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -275,8 +274,6 @@ func (w *Writer) AddContentFile(name string) (res PublicationResource, err error
 func (w *Writer) Cover(cover []byte) (err error) {
 	name := "cover"
 	mime := http.DetectContentType(cover)
-
-	log.Println("what is mime", mime)
 
 	content := name
 	switch mime {
