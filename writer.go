@@ -33,6 +33,8 @@ type Writer struct {
 	direction  string
 }
 
+// New creates a new Writer with the given publication identifier.
+// The identifier is assigned to the package metadata (dc:identifier).
 func New(pubId string) *Writer {
 	epubWriter := &Writer{
 		identifier: pubId,
@@ -66,22 +68,27 @@ func New(pubId string) *Writer {
 	return epubWriter
 }
 
+// Direction sets the writing direction (ltr or rtl) used by the spine.
 func (w *Writer) Direction(dir string) {
 	w.epub.SelectedPackage().Dir = dir
 }
 
+// SetContentDir sets the directory used for storing content documents.
 func (w *Writer) SetContentDir(dir string) {
 	w.contentDir = dir
 }
 
+// SetTextDir sets the directory used for text document organization.
 func (w *Writer) SetTextDir(dir string) {
 	w.textDir = dir
 }
 
+// SetImageDir sets the directory used for storing image resources.
 func (w *Writer) SetImageDir(dir string) {
 	w.imagesDir = dir
 }
 
+// Title sets one or more title entries in the metadata.
 func (w *Writer) Title(title ...string) {
 	if len(title) <= 0 {
 		return
@@ -100,6 +107,7 @@ func (w *Writer) Title(title ...string) {
 	}
 }
 
+// Description sets a short description or summary for the publication.
 func (w *Writer) Description(description string) {
 	w.epub.SelectedPackage().Metadata.OptionalDC = append(
 		w.epub.SelectedPackage().Metadata.OptionalDC,
@@ -107,6 +115,7 @@ func (w *Writer) Description(description string) {
 	)
 }
 
+// Author sets the primary creator/author in the package metadata.
 func (w *Writer) Author(creator string) {
 	w.epub.SelectedPackage().Metadata.OptionalDC = append(
 		w.epub.SelectedPackage().Metadata.OptionalDC,
@@ -114,6 +123,7 @@ func (w *Writer) Author(creator string) {
 	)
 }
 
+// Creator adds a creator with a specific identifier attribute to the metadata.
 func (w *Writer) Creator(id string, creator string) {
 	w.epub.SelectedPackage().Metadata.OptionalDC = append(
 		w.epub.SelectedPackage().Metadata.OptionalDC,
@@ -121,6 +131,7 @@ func (w *Writer) Creator(id string, creator string) {
 	)
 }
 
+// Contributor adds a contributor entry of the specified role or type.
 func (w *Writer) Contributor(kind string, contributor string) {
 	w.epub.SelectedPackage().Metadata.OptionalDC = append(
 		w.epub.SelectedPackage().Metadata.OptionalDC,
@@ -128,6 +139,7 @@ func (w *Writer) Contributor(kind string, contributor string) {
 	)
 }
 
+// Subject adds a subject or theme classification to the publication.
 func (w *Writer) Subject(id string, subject string) {
 	w.epub.SelectedPackage().Metadata.OptionalDC = append(
 		w.epub.SelectedPackage().Metadata.OptionalDC,
@@ -135,23 +147,28 @@ func (w *Writer) Subject(id string, subject string) {
 	)
 }
 
+// LongDescription sets an extended descriptive summary.
 func (w *Writer) LongDescription(description string) {
 	w.Refines("#description", "long-description", description)
 }
 
+// Rights sets the copyright or licensing information for the publication.
 func (w *Writer) Rights(rights string) {
 	w.DublinCores(map[string]string{"rights": rights})
 }
 
+// Date sets the publication date metadata.
 func (w *Writer) Date(date time.Time) {
 	dateString := date.Format(time.RFC3339)
 	w.DublinCores(map[string]string{"date": dateString})
 }
 
+// Publisher sets the publication publisher.
 func (w *Writer) Publisher(publisher string) {
 	w.DublinCores(map[string]string{"publisher": publisher})
 }
 
+// DublinCores sets multiple Dublin Core metadata fields at once.
 func (w *Writer) DublinCores(keyVal map[string]string) {
 	for key, value := range keyVal {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
@@ -167,6 +184,7 @@ func (w *Writer) DublinCores(keyVal map[string]string) {
 	}
 }
 
+// Meta adds a meta element to the package metadata as-is.
 func (w *Writer) Meta(meta pkg.Meta) {
 	w.epub.SelectedPackage().Metadata.Meta = append(
 		w.epub.SelectedPackage().Metadata.Meta,
@@ -174,6 +192,7 @@ func (w *Writer) Meta(meta pkg.Meta) {
 	)
 }
 
+// MetaContent adds metadata key/value entries that do not require refinements.
 func (w *Writer) MetaContent(keyVal map[string]string) {
 	for key, value := range keyVal {
 		w.Meta(
@@ -182,12 +201,14 @@ func (w *Writer) MetaContent(keyVal map[string]string) {
 	}
 }
 
+// MetaProperty adds a property-based metadata refinement entry.
 func (w *Writer) MetaProperty(id string, property string, value string) {
 	w.Meta(
 		pkg.Meta{ID: id, Property: property, Value: value},
 	)
 }
 
+// Refines applies a metadata refinement to an existing metadata item.
 func (w *Writer) Refines(refines string, property string, value string, otherAttributes ...pkg.Meta) {
 	meta := pkg.Meta{}
 	for _, m := range otherAttributes {
@@ -203,14 +224,15 @@ func (w *Writer) Refines(refines string, property string, value string, otherAtt
 	w.Meta(finalMeta)
 }
 
+// Identifiers adds one or more identifiers to the package metadata.
 func (w *Writer) Identifiers(identifier ...string) {
-
 	for index, id := range identifier {
 		pubId := pkg.DCIdentifier{ID: "pub-id-" + strconv.Itoa(index), Value: id, XMLName: xml.Name{Local: "dc:identifier"}}
 		w.epub.SelectedPackage().Metadata.Identifiers = append(w.epub.SelectedPackage().Metadata.Identifiers, pubId)
 	}
 }
 
+// Languages adds one or more language codes to the publication metadata.
 func (w *Writer) Languages(language ...string) {
 	if len(language) <= 0 {
 		return
@@ -223,6 +245,8 @@ func (w *Writer) Languages(language ...string) {
 
 }
 
+// AddGuide adds a guide reference entry (e.g., "cover", "toc", "title-page")
+// to the package metadata.
 func (w *Writer) AddGuide(kind pkg.GuideReferenceType, href string, title string) {
 	if w.epub.SelectedPackage().Guide == nil {
 		w.epub.SelectedPackage().Guide = &pkg.Guide{}
@@ -234,6 +258,8 @@ func (w *Writer) AddGuide(kind pkg.GuideReferenceType, href string, title string
 	)
 }
 
+// AddContentFile adds a content file to the publication by reading the file
+// from disk. Returns the created resource and any file access error.
 func (w *Writer) AddContentFile(name string) (res PublicationResource, err error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -245,6 +271,7 @@ func (w *Writer) AddContentFile(name string) (res PublicationResource, err error
 	return
 }
 
+// Cover sets the publication cover from a raw image byte slice.
 func (w *Writer) Cover(cover []byte) (err error) {
 	name := "cover"
 	mime := http.DetectContentType(cover)
@@ -266,6 +293,7 @@ func (w *Writer) Cover(cover []byte) (err error) {
 	return
 }
 
+// CoverPNG sets the publication cover image from an image.Image encoded as PNG
 func (w *Writer) CoverPNG(cover image.Image) (err error) {
 	name := "cover"
 	content := name + ".png"
@@ -281,6 +309,7 @@ func (w *Writer) CoverPNG(cover image.Image) (err error) {
 	return
 }
 
+// CoverJPG sets the publication cover image from an image.Image encoded as JPEG.
 func (w *Writer) CoverJPG(cover image.Image) (err error) {
 	name := "cover"
 	content := name + ".jpg"
@@ -296,6 +325,7 @@ func (w *Writer) CoverJPG(cover image.Image) (err error) {
 	return
 }
 
+// CoverFile sets the publication cover image by file path.
 func (w *Writer) CoverFile(name string) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -324,6 +354,7 @@ func (w *Writer) addImageCover(name string, content []byte) (res PublicationReso
 	return res
 }
 
+// AddImage adds an image resource from raw bytes to the publication.
 func (w *Writer) AddImage(name string, content []byte) (res PublicationResource) {
 	href := path.Join(w.imagesDir, name)
 	filePath := path.Join(w.contentDir, href)
@@ -341,6 +372,7 @@ func (w *Writer) AddImage(name string, content []byte) (res PublicationResource)
 	return res
 }
 
+// AddImageFile adds an image resource to the publication by reading from disk.
 func (w *Writer) AddImageFile(name string) (res PublicationResource) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -352,6 +384,8 @@ func (w *Writer) AddImageFile(name string) (res PublicationResource) {
 	return
 }
 
+// AddContent adds a content file (such as XHTML or SVG) to the publication
+// using the provided filename and raw bytes. Returns the created resource.
 func (w *Writer) AddContent(filename string, content []byte) (res PublicationResource) {
 	href := filename
 	filePath := path.Join(w.contentDir, href)
@@ -402,6 +436,7 @@ func (w *Writer) addResource(
 	return pubRes
 }
 
+// AddSpineItem appends the given resource to the spine reading order.
 func (w *Writer) AddSpineItem(res PublicationResource) {
 	itemRef := pkg.ItemRef{IDRef: res.ID}
 	w.epub.SelectedPackage().Spine.ItemRefs = append(
@@ -533,6 +568,7 @@ func (w *Writer) guardCheck() (err error) {
 	return
 }
 
+// Write finalizes the EPUB structure and writes it to the specified filename.
 func (w *Writer) Write(filename string) (err error) {
 	err = w.guardCheck()
 	if err != nil {
