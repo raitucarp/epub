@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"encoding/xml"
-	"fmt"
 )
 
 // Package represents the root package element
@@ -211,7 +210,8 @@ func (e *GuideReferenceType) UnmarshalText(text []byte) error {
 		*e = GuideRefText
 
 	default:
-		return fmt.Errorf("invalid enum value: %s", s)
+		// Instead of returning an error, store the value directly
+		*e = GuideReferenceType(s)
 	}
 	return nil
 }
