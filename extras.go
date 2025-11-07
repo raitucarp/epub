@@ -62,6 +62,10 @@ func (r *Reader) getCoverInResources() (cover *image.Image) {
 		if res.Properties == pkg.CoverImageProperty {
 			cover = r.ReadImageByHref(res.Href)
 		}
+
+		if cover == nil && coverImagePattern.MatchString(res.ID) {
+			cover = r.ReadImageByHref(res.Href)
+		}
 	}
 
 	return
@@ -81,6 +85,53 @@ func (r *Reader) getCoverInSpine() (cover *image.Image) {
 	return
 }
 
+func findFirstImg(n *html.Node) *html.Node {
+	if n.Type == html.ElementNode && n.Data == "img" {
+		return n
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if img := findFirstImg(c); img != nil {
+			return img
+		}
+	}
+
+	return nil
+}
+
+func getImageSrc(imgNode *html.Node) (href string) {
+	srcIndex := slices.IndexFunc(imgNode.Attr, func(attr html.Attribute) bool { return attr.Key == "src" })
+	if srcIndex == -1 {
+		return
+	}
+	href = imgNode.Attr[srcIndex].Val
+	return
+}
+
+func (r *Reader) getCoverFromToc() (cover *image.Image) {
+	toc, err := r.TableOfContents()
+	if err != nil {
+		return
+	}
+
+	for _, item := range toc.Items {
+		if !coverImagePattern.MatchString(item.Href) {
+			continue
+		}
+
+		htmlNode := r.ReadContentHTMLByHref(item.Href)
+		if htmlNode == nil {
+			continue
+		}
+		firstImg := findFirstImg(htmlNode)
+		href := getImageSrc(firstImg)
+		cover = r.ReadImageByHref(href)
+
+	}
+
+	return
+}
+
 // Cover returns the publication's cover image if present.
 func (r *Reader) Cover() (cover *image.Image) {
 	cover = r.getCoverInMetadata()
@@ -91,6 +142,10 @@ func (r *Reader) Cover() (cover *image.Image) {
 
 	if cover == nil {
 		cover = r.getCoverInSpine()
+	}
+
+	if cover == nil {
+		cover = r.getCoverFromToc()
 	}
 
 	return
@@ -208,7 +263,7 @@ func (r *Reader) Author() (author string) {
 		}
 	}
 
-	return "Anonymous"
+	return "Unknown"
 }
 
 // Language returns the primary language of the publication, as declared
