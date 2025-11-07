@@ -127,19 +127,23 @@ func (r *Reader) Title() (title string) {
 		}
 	}
 
-	for _, ref := range r.CurrentSelectedPackage().Guide.References {
-		if ref.Type == pkg.GuideRefTitlePage {
-			res := r.SelectResourceByHref(ref.Href)
-			if res == nil {
-				continue
-			}
+	guide := r.CurrentSelectedPackage().Guide
 
-			htmlNode, err := r.parseHTML(res.Content)
-			if err != nil {
-				continue
+	if guide != nil {
+		for _, ref := range guide.References {
+			if ref.Type == pkg.GuideRefTitlePage {
+				res := r.SelectResourceByHref(ref.Href)
+				if res == nil {
+					continue
+				}
+
+				htmlNode, err := r.parseHTML(res.Content)
+				if err != nil {
+					continue
+				}
+				title = getTextByEpubType(htmlNode, "title")
+				return
 			}
-			title = getTextByEpubType(htmlNode, "title")
-			return
 		}
 	}
 
@@ -173,19 +177,23 @@ func (r *Reader) Author() (author string) {
 		}
 	}
 
-	for _, ref := range r.CurrentSelectedPackage().Guide.References {
-		if ref.Type == pkg.GuideRefTitlePage {
-			res := r.SelectResourceByHref(ref.Href)
-			if res == nil {
-				continue
-			}
+	guide := r.CurrentSelectedPackage().Guide
 
-			htmlNode, err := r.parseHTML(res.Content)
-			if err != nil {
-				continue
+	if guide != nil {
+		for _, ref := range guide.References {
+			if ref.Type == pkg.GuideRefTitlePage {
+				res := r.SelectResourceByHref(ref.Href)
+				if res == nil {
+					continue
+				}
+
+				htmlNode, err := r.parseHTML(res.Content)
+				if err != nil {
+					continue
+				}
+				author = getTextByEpubType(htmlNode, "author")
+				return
 			}
-			author = getTextByEpubType(htmlNode, "author")
-			return
 		}
 	}
 
