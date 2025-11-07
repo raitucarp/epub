@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -240,13 +241,20 @@ func (r *Reader) ReadImageById(id string) (img *image.Image) {
 // ReadImageByHref returns the image resource referenced by the given href,
 // if present in the manifest.
 func (r *Reader) ReadImageByHref(href string) (img *image.Image) {
+	cleanHref := filepath.Base(filepath.Dir(href)) + "/" + filepath.Base(href)
+	cleanHref = filepath.ToSlash(cleanHref)
 
 	for _, res := range r.epub.resources {
-		if res.Href == href {
+		isImage := slices.Contains(pkg.ImageMediaTypes, res.MIMEType)
 
+		if res.Href == cleanHref && isImage {
 			reader := bytes.NewReader(res.Content)
-			img, _, _ := image.Decode(reader)
-			return &img
+			newImage, _, err := image.Decode(reader)
+			if err != nil {
+				return
+			}
+			img = &newImage
+			return img
 		}
 	}
 	return
