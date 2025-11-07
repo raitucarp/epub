@@ -7,12 +7,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 
 	_ "golang.org/x/image/webp"
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/raitucarp/epub/ncx"
@@ -169,6 +173,8 @@ title: %#v
 		}
 
 		markdownString := string(md)
+		t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+		markdownString, _, _ = transform.String(t, markdownString)
 		if frontMatters != "" {
 			markdownString = frontMatters + "\n" + string(markdownString)
 		}
