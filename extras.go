@@ -9,10 +9,15 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/raitucarp/epub/pkg"
 	"golang.org/x/net/html"
+	"golang.org/x/text/runes"
 )
 
 // UID returns the unique identifier of the publication.
@@ -281,6 +286,8 @@ func extractDescriptionFromEpubType(epubType string, htmlNode *html.Node) (descr
 	return
 }
 
+var coverPagePattern = regexp.MustCompile("cover")
+
 func (r *Reader) extractDescriptionFromSpine() (description string) {
 	spine := r.Spine()
 	introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
@@ -336,6 +343,51 @@ func (r *Reader) extractDescriptionFromReferences() (description string) {
 	return
 }
 
+func (r *Reader) extractDescriptionFromFirstFullContentTOCItem() (description string) {
+	toc, err := r.TableOfContents()
+	if err != nil {
+		return
+	}
+
+	var firstContentItem TOC
+	for _, item := range toc.Items {
+		if coverPagePattern.MatchString(item.Href) {
+			continue
+		}
+
+		if firstContentItem.Title == "" {
+			firstContentItem = item
+			break
+		}
+	}
+
+	if firstContentItem.Title == "" {
+		return
+	}
+
+	content := r.ReadContentHTMLByHref(firstContentItem.Href)
+
+	body := getBody(content)
+	markdownBody, _ := htmltomarkdown.ConvertNode(body)
+	description = string(markdownBody)
+
+	return
+}
+
+func convertDescriptionToMd(description string) string {
+	descriptionTemp := description
+	newDesc, err := htmltomarkdown.ConvertString(description)
+	if err != nil {
+		description = descriptionTemp
+	}
+	description = newDesc
+
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	description, _, _ = transform.String(t, description)
+
+	return description
+}
+
 // Description returns the publication's description metadata if defined.
 func (r *Reader) Description() (description string) {
 	metadata := r.epub.metadata
@@ -353,13 +405,12 @@ func (r *Reader) Description() (description string) {
 		description = r.extractDescriptionFromReferences()
 	}
 
+	if description == "" {
+		description = r.extractDescriptionFromFirstFullContentTOCItem()
+	}
+
 	if description != "" {
-		descriptionTemp := description
-		newDesc, err := htmltomarkdown.ConvertString(description)
-		if err != nil {
-			description = descriptionTemp
-		}
-		description = newDesc
+		description = convertDescriptionToMd(description)
 	}
 	return
 }
@@ -369,7 +420,13 @@ func (r *Reader) Description() (description string) {
 // reference type and mapped to corresponding HTML content.
 func (r *Reader) References() (references map[pkg.GuideReferenceType]*html.Node) {
 	references = make(map[pkg.GuideReferenceType]*html.Node)
-	for _, ref := range r.epub.SelectedPackage().Guide.References {
+
+	guides := r.epub.SelectedPackage().Guide
+	if guides == nil {
+		return
+	}
+
+	for _, ref := range guides.References {
 
 		u, err := url.Parse(ref.Href)
 		if err != nil {
