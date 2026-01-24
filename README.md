@@ -590,13 +590,7 @@ cd epub
 go mod download
 go test ./...
 ```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
+ 
 ---
 
 ## Writer API Overview
@@ -624,4 +618,4 @@ func (w *Writer) Write(filename string) error
 
 ## License
 
-MIT License.
+See [LICENSE.md](LICENSE)
