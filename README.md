@@ -464,19 +464,7 @@ import (
 	"log"
 	"strings"
 	"github.com/raitucarp/epub"
-	"golang.org/x/net/html"
 )
-
-func extractText(n *html.Node) string {
-	if n.Type == html.TextNode {
-		return strings.TrimSpace(n.Data)
-	}
-	var text string
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		text += extractText(c) + " "
-	}
-	return text
-}
 
 func main() {
 	r, err := epub.OpenReader("book.epub")
@@ -485,9 +473,8 @@ func main() {
 	}
 
 	for _, id := range r.ListContentDocumentIds() {
-		node := r.ReadContentHTMLById(id)
-		text := extractText(node)
-		fmt.Println(text)
+		html := r.ReadContentHTMLById(id)
+		fmt.Printf("Content for %s: %v\n", id, html)
 	}
 }
 ```
