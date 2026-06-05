@@ -397,48 +397,29 @@ func (r *Reader) Refines() (refines map[string]map[string][]string) {
 	refines = make(map[string]map[string][]string)
 	packageMetadata := r.CurrentSelectedPackage().Metadata
 
-	for _, dcIdentifiers := range packageMetadata.Identifiers {
-		if dcIdentifiers.ID != "" {
-			refineName := dcIdentifiers.ID
-			if refines[refineName] == nil {
-				refines[refineName] = make(map[string][]string)
+	addRefine := func(id, local, value string) {
+		if id != "" {
+			if refines[id] == nil {
+				refines[id] = make(map[string][]string)
 			}
-
-			refines[refineName][dcIdentifiers.XMLName.Local] = append(refines[refineName][dcIdentifiers.XMLName.Local], dcIdentifiers.Value)
+			refines[id][local] = append(refines[id][local], value)
 		}
+	}
+
+	for _, dcIdentifiers := range packageMetadata.Identifiers {
+		addRefine(dcIdentifiers.ID, dcIdentifiers.XMLName.Local, dcIdentifiers.Value)
 	}
 
 	for _, title := range packageMetadata.Titles {
-		if title.ID != "" {
-			refineName := title.ID
-			if refines[refineName] == nil {
-				refines[refineName] = make(map[string][]string)
-			}
-
-			refines[refineName][title.XMLName.Local] = append(refines[refineName][title.XMLName.Local], title.Value)
-		}
+		addRefine(title.ID, title.XMLName.Local, title.Value)
 	}
 
 	for _, language := range packageMetadata.Languages {
-		if language.ID != "" {
-			refineName := language.ID
-			if refines[refineName] == nil {
-				refines[refineName] = make(map[string][]string)
-			}
-
-			refines[refineName][language.XMLName.Local] = append(refines[refineName][language.XMLName.Local], language.Value)
-		}
+		addRefine(language.ID, language.XMLName.Local, language.Value)
 	}
 
 	for _, optional := range packageMetadata.OptionalDC {
-		if optional.ID != "" {
-			refineName := optional.ID
-			if refines[refineName] == nil {
-				refines[refineName] = make(map[string][]string)
-			}
-
-			refines[refineName][optional.XMLName.Local] = append(refines[refineName][optional.XMLName.Local], optional.Value)
-		}
+		addRefine(optional.ID, optional.XMLName.Local, optional.Value)
 	}
 
 	refineCounter := map[string]int{}
