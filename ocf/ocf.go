@@ -30,8 +30,17 @@ func (z *OCFZipContainer) readFiles(zrc *zip.Reader) (err error) {
 			return err
 		}
 
-		content, err := io.ReadAll(rc)
+		// Prevent zip bomb by limiting the read size to the uncompressed size
+		// and enforcing a maximum file size (e.g., 1GB)
+		const maxFileSize = 1024 * 1024 * 1024
+		if f.UncompressedSize64 > maxFileSize {
+			rc.Close()
+			return fmt.Errorf("file %s is too large: %d bytes", f.Name, f.UncompressedSize64)
+		}
+
+		content, err := io.ReadAll(io.LimitReader(rc, int64(f.UncompressedSize64)))
 		if err != nil {
+			rc.Close()
 			return err
 		}
 
