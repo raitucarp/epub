@@ -356,10 +356,20 @@ func (r *Reader) extractDescriptionFromSpine() (description string) {
 	introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
 	for _, res := range spine {
 		htmlNode := r.ReadContentHTMLByHref(res.Href)
+		if htmlNode == nil {
+			continue
+		}
 
-		for _, introType := range introTypes {
-			if description == "" {
-				description = extractDescriptionFromEpubType(introType, htmlNode)
+		for desc := range htmlNode.Descendants() {
+			abstractIndex := slices.IndexFunc(desc.Attr, func(attr html.Attribute) bool {
+				return attr.Key == "epub:type" && slices.Contains(introTypes, attr.Val)
+			})
+
+			if abstractIndex > -1 {
+				descByte, err := htmltomarkdown.ConvertNode(desc)
+				if err == nil {
+					return string(descByte)
+				}
 			}
 		}
 	}

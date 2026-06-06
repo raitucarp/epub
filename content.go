@@ -187,10 +187,13 @@ title: %#v
 // ReadContentHTMLById returns the XHTML/HTML content document associated
 // with the given manifest ID, parsed into an html.Node tree.
 func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
-	resourcesHtml := r.ContentDocumentXHTML()
-	for resId, res := range resourcesHtml {
-		if resId == id {
-			return res
+	for _, res := range r.epub.resources {
+		if res.ID == id && res.MIMEType == pkg.MediaTypeXHTML {
+			node, err := r.parseHTML(res.Content)
+			if err == nil {
+				return node
+			}
+			return nil
 		}
 	}
 	return
