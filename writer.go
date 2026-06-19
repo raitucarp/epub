@@ -265,7 +265,7 @@ func (w *Writer) AddContentFile(name string) (res PublicationResource, err error
 		return
 	}
 
-	res = w.AddContent(name, data)
+	res = w.AddContent(filepath.Base(name), data)
 
 	return
 }
@@ -329,7 +329,7 @@ func (w *Writer) CoverFile(name string) {
 		return
 	}
 
-	content := name
+	content := filepath.Base(name)
 	w.addImageCover(content, data)
 	w.MetaContent(map[string]string{"cover": content})
 }
@@ -376,7 +376,7 @@ func (w *Writer) AddImageFile(name string) (res PublicationResource) {
 		return
 	}
 
-	res = w.AddImage(name, data)
+	res = w.AddImage(filepath.Base(name), data)
 
 	return
 }
