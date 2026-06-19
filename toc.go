@@ -93,6 +93,17 @@ func (t *TOC) parseNav(navNode *html.Node) {
 }
 
 func (t *TOC) parseList(listNode *html.Node) {
+	var count int
+	for li := listNode.FirstChild; li != nil; li = li.NextSibling {
+		if li.Type == html.ElementNode && li.Data == "li" {
+			count++
+		}
+	}
+
+	if count > 0 {
+		t.Items = slices.Grow(t.Items, count)
+	}
+
 	for li := listNode.FirstChild; li != nil; li = li.NextSibling {
 		if li.Type == html.ElementNode && li.Data == "li" {
 			item := t.parseListItem(li)
