@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 )
 
 const MimeType = "application/epub+zip"
@@ -23,6 +25,10 @@ func (z *OCFZipContainer) readFiles(zrc *zip.Reader) (err error) {
 		info := f.FileInfo()
 		if info.IsDir() {
 			continue
+		}
+
+		if strings.Contains(f.Name, `\`) || !filepath.IsLocal(f.Name) {
+			return fmt.Errorf("invalid path in zip: %s", f.Name)
 		}
 
 		rc, err := f.Open()
