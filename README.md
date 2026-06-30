@@ -1,3 +1,5 @@
+**Disclaimer: Starting from June 2026, this repository is written by the collaboration of @raitucarp and Google Jules.**
+
 # Go EPUB Library
 
 <div align="center">
