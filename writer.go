@@ -323,15 +323,16 @@ func (w *Writer) CoverJPG(cover image.Image) (err error) {
 }
 
 // CoverFile sets the publication cover image by file path.
-func (w *Writer) CoverFile(name string) {
+func (w *Writer) CoverFile(name string) error {
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return
+		return err
 	}
 
 	content := filepath.Base(name)
 	w.addImageCover(content, data)
 	w.MetaContent(map[string]string{"cover": content})
+	return nil
 }
 
 func (w *Writer) addImageCover(name string, content []byte) (res PublicationResource) {
