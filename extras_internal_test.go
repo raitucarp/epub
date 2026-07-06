@@ -5,6 +5,24 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+func TestReader_Version(t *testing.T) {
+	r := &Reader{
+		epub: &Epub{
+			rendition: "default",
+			packagePubs: map[string]*pkg.Package{
+				"default": {
+					Version: "3.0",
+				},
+			},
+		},
+	}
+
+	version := r.Version()
+	if version != "3.0" {
+		t.Errorf("expected '3.0', got %q", version)
+	}
+}
+
 func TestReader_Description_Metadata(t *testing.T) {
 	r := &Reader{
 		epub: &Epub{
