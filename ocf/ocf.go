@@ -27,7 +27,8 @@ func (z *OCFZipContainer) readFiles(zrc *zip.Reader) (err error) {
 			continue
 		}
 
-		if strings.Contains(f.Name, `\`) || !filepath.IsLocal(f.Name) {
+		cleanPath := path.Clean(f.Name)
+		if strings.Contains(f.Name, `\`) || !filepath.IsLocal(f.Name) || cleanPath == ".." || strings.HasPrefix(cleanPath, "../") {
 			return fmt.Errorf("invalid path in zip: %s", f.Name)
 		}
 
@@ -50,7 +51,7 @@ func (z *OCFZipContainer) readFiles(zrc *zip.Reader) (err error) {
 			return err
 		}
 
-		z.files[f.Name] = content
+		z.files[cleanPath] = content
 		rc.Close()
 	}
 	return

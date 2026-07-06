@@ -20,6 +20,10 @@ func TestZipSlipPrevention(t *testing.T) {
 		{"backslash path traversal", "..\\..\\etc\\passwd", true},
 		{"backslash absolute path", "C:\\Windows\\system.ini", true},
 		{"hidden parent traversal", "folder/../../etc/passwd", true},
+		{"resolves to parent", "a/../../etc/passwd", true},
+		{"valid with dot", "./valid.txt", false},
+		{"valid with redundant dot", "folder/./valid.txt", false},
+		{"valid resolves inside", "folder/sub/../valid.txt", false},
 	}
 
 	for _, tt := range tests {
