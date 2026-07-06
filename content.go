@@ -322,11 +322,17 @@ func (r *Reader) ImageResources() (images map[string][]byte) {
 
 // Spine returns publication's spines, ordered resources like table of contents.
 func (r *Reader) Spine() (orderedResources []PublicationResource) {
-	for _, item := range r.CurrentSelectedPackage().Spine.ItemRefs {
-		for _, res := range r.epub.resources {
-			if item.IDRef == res.ID {
-				orderedResources = append(orderedResources, res)
-			}
+	spineItems := r.CurrentSelectedPackage().Spine.ItemRefs
+	orderedResources = make([]PublicationResource, 0, len(spineItems))
+
+	resourceMap := make(map[string]int, len(r.epub.resources))
+	for i, res := range r.epub.resources {
+		resourceMap[res.ID] = i
+	}
+
+	for _, item := range spineItems {
+		if idx, ok := resourceMap[item.IDRef]; ok {
+			orderedResources = append(orderedResources, r.epub.resources[idx])
 		}
 	}
 
