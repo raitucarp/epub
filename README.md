@@ -577,6 +577,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 git clone https://github.com/raitucarp/epub.git
 cd epub
 go mod download
+git config core.hooksPath .githooks
 go test ./...
 ```
  

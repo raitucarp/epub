@@ -1,0 +1,12 @@
+#!/bin/sh
+# Ensure temp directory exists for tests
+mkdir -p tests/temp
+
+echo "Running tests..."
+# We use go list to get packages with tests, to avoid the no such tool covdata error on packages without tests.
+PKGS=$(go list -f '{{if len .TestGoFiles}}{{.ImportPath}}{{end}}' ./...)
+if ! go test -cover $PKGS; then
+    echo "Tests or coverage failed!"
+    exit 1
+fi
+echo "Tests and coverage passed."
