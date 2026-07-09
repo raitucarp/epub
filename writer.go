@@ -553,7 +553,7 @@ func (w *Writer) guardCheck() (err error) {
 					content++
 				}
 
-				if item.Properties == "cover-image" {
+				if item.Properties == pkg.CoverImageProperty {
 					cover++
 				}
 			}
