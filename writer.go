@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -260,6 +261,9 @@ func (w *Writer) AddGuide(kind pkg.GuideReferenceType, href string, title string
 // AddContentFile adds a content file to the publication by reading the file
 // from disk. Returns the created resource and any file access error.
 func (w *Writer) AddContentFile(name string) (res PublicationResource, err error) {
+	if !filepath.IsLocal(name) {
+		return res, fmt.Errorf("invalid path: path must be local")
+	}
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return
@@ -324,6 +328,9 @@ func (w *Writer) CoverJPG(cover image.Image) (err error) {
 
 // CoverFile sets the publication cover image by file path.
 func (w *Writer) CoverFile(name string) error {
+	if !filepath.IsLocal(name) {
+		return fmt.Errorf("invalid path: path must be local")
+	}
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return err
@@ -372,6 +379,9 @@ func (w *Writer) AddImage(name string, content []byte) (res PublicationResource)
 
 // AddImageFile adds an image resource to the publication by reading from disk.
 func (w *Writer) AddImageFile(name string) (res PublicationResource) {
+	if !filepath.IsLocal(name) {
+		return
+	}
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return
