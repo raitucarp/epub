@@ -58,13 +58,13 @@ func (metaInf *MetaInf) parseManifest(data []byte) (err error) {
 }
 
 func (metaInf *MetaInf) parseMetadata(data []byte) (err error) {
-	return manifestFile.Unmarshal(data, &metaInf.metadata)
+	return metadataFile.Unmarshal(data, &metaInf.metadata)
 }
 
 func (metaInf *MetaInf) parseRights(data []byte) (err error) {
-	return manifestFile.Unmarshal(data, &metaInf.rights)
+	return rightsFile.Unmarshal(data, &metaInf.rights)
 }
 
 func (metaInf *MetaInf) parseSignatures(data []byte) (err error) {
-	return manifestFile.Unmarshal(data, &metaInf.signatures)
+	return signaturesFile.Unmarshal(data, &metaInf.signatures)
 }
