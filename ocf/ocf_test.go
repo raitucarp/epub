@@ -91,7 +91,7 @@ func TestOCFZipContainer_Getters(t *testing.T) {
 
 func TestOCFZipContainer_AllFiles(t *testing.T) {
 	files := map[string][]byte{
-		"mimetype": []byte(MimeType),
+		"mimetype":               []byte(MimeType),
 		"META-INF/container.xml": []byte("container"),
 	}
 	container := &OCFZipContainer{
@@ -128,9 +128,9 @@ func TestOCFZipContainer_SelectFile(t *testing.T) {
 
 func TestOCFZipContainer_NonMetaInfFiles(t *testing.T) {
 	files := map[string][]byte{
-		"mimetype": []byte(MimeType),
+		"mimetype":               []byte(MimeType),
 		"META-INF/container.xml": []byte("container"),
-		"OEBPS/content.opf": []byte("content"),
+		"OEBPS/content.opf":      []byte("content"),
 	}
 	container := &OCFZipContainer{
 		files: files,

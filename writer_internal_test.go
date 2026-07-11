@@ -1,6 +1,8 @@
 package epub
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/raitucarp/epub/ncx"
@@ -160,5 +162,55 @@ func TestWriter_PathTraversal(t *testing.T) {
 				t.Errorf("AddImageFile(%q) expected empty resource on invalid path, got %v", tt.path, res)
 			}
 		})
+	}
+}
+
+func TestWriter_SymlinkTraversal(t *testing.T) {
+	w := New("test-pub-id")
+
+	// Create a safe directory
+	safeDir := t.TempDir()
+
+	// Create a sensitive file outside the safe dir
+	sensitiveFile := filepath.Join(t.TempDir(), "secret.txt")
+	err := os.WriteFile(sensitiveFile, []byte("super secret"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create sensitive file: %v", err)
+	}
+
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	// Change working directory to safeDir
+	err = os.Chdir(safeDir)
+	if err != nil {
+		t.Fatalf("Failed to change working directory: %v", err)
+	}
+	defer os.Chdir(oldWd) // Restore original working directory
+
+	// Create a symlink pointing to the sensitive file
+	err = os.Symlink(sensitiveFile, "link_to_secret")
+	if err != nil {
+		t.Fatalf("Failed to create symlink: %v", err)
+	}
+
+	// Test AddContentFile
+	_, err = w.AddContentFile("link_to_secret")
+	if err == nil {
+		t.Errorf("AddContentFile: expected error when reading via escaping symlink, got nil")
+	}
+
+	// Test CoverFile
+	err = w.CoverFile("link_to_secret")
+	if err == nil {
+		t.Errorf("CoverFile: expected error when reading via escaping symlink, got nil")
+	}
+
+	// Test AddImageFile
+	res := w.AddImageFile("link_to_secret")
+	if res.ID != "" || len(res.Content) > 0 {
+		t.Errorf("AddImageFile: expected empty resource when reading via escaping symlink, got %v", res)
 	}
 }
