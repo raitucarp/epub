@@ -41,6 +41,14 @@ func TestTOC_JSON(t *testing.T) {
 			},
 			expected: `{"title":"Chapter 2","href":"chapter2.html"}`,
 		},
+		{
+			name: "special characters",
+			toc: &TOC{
+				Title: "Chapter 3: \"The Awakening\" & <Others>",
+				Href:  "chapter3.html?foo=bar&baz=qux",
+			},
+			expected: `{"title":"Chapter 3: \"The Awakening\" \u0026 \u003cOthers\u003e","href":"chapter3.html?foo=bar\u0026baz=qux"}`,
+		},
 	}
 
 	for _, tt := range tests {
