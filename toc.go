@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/raitucarp/epub/ncx"
 	"golang.org/x/net/html"
@@ -24,12 +23,8 @@ type TOC struct {
 
 // JSON marshals the table of contents structure into JSON format. This is useful
 // for external tools, logging, debugging, or serialization to other formats.
-func (t *TOC) JSON() (b []byte, err error) {
-	b, err = json.Marshal(t)
-	if err != nil {
-		return
-	}
-	return
+func (t *TOC) JSON() ([]byte, error) {
+	return json.Marshal(t)
 }
 
 // ReadContentHTML returns the content document associated with the currently
@@ -53,32 +48,23 @@ func (t *TOC) parseFromHTML(node *html.Node) error {
 }
 
 func (t *TOC) findNavNode(node *html.Node) *html.Node {
-	var navNode *html.Node
-	var findNav func(*html.Node)
-
-	findNav = func(n *html.Node) {
+	return FindNode(node, func(n *html.Node) bool {
 		if n.Type == html.ElementNode {
 			for _, attr := range n.Attr {
 				if attr.Val == "toc" {
-					navNode = n
-					return
+					return true
 				}
 			}
 		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			findNav(c)
-		}
-	}
-
-	findNav(node)
-	return navNode
+		return false
+	})
 }
 
 func (t *TOC) parseNav(navNode *html.Node) {
 	// Extract title from h2
 	for c := navNode.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type == html.ElementNode {
-			t.Title = t.getTextContent(c)
+			t.Title = GetTextContent(c)
 			break
 		}
 	}
@@ -139,7 +125,7 @@ func (t *TOC) parseListItem(liNode *html.Node) TOC {
 		}
 
 		// Extract title (text content, ignoring spans)
-		item.Title = t.getTextContent(anchor)
+		item.Title = GetTextContent(anchor)
 	}
 
 	// Parse nested list if present
@@ -148,23 +134,6 @@ func (t *TOC) parseListItem(liNode *html.Node) TOC {
 	}
 
 	return item
-}
-
-func (t *TOC) getTextContent(node *html.Node) string {
-	var text strings.Builder
-	var extractText func(*html.Node)
-
-	extractText = func(n *html.Node) {
-		if n.Type == html.TextNode {
-			text.WriteString(n.Data)
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			extractText(c)
-		}
-	}
-
-	extractText(node)
-	return strings.TrimSpace(text.String())
 }
 
 // convertNavPointsToTOCItems recursively converts NavPoints to TOC items
