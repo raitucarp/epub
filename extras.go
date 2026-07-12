@@ -86,17 +86,9 @@ func (r *Reader) getCoverInSpine() (cover *image.Image) {
 }
 
 func findFirstImg(n *html.Node) *html.Node {
-	if n.Type == html.ElementNode && n.Data == "img" {
-		return n
-	}
-
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if img := findFirstImg(c); img != nil {
-			return img
-		}
-	}
-
-	return nil
+	return FindNode(n, func(node *html.Node) bool {
+		return node.Type == html.ElementNode && node.Data == "img"
+	})
 }
 
 func getImageSrc(imgNode *html.Node) (href string) {
@@ -378,21 +370,9 @@ func (r *Reader) extractDescriptionFromSpine() (description string) {
 }
 
 func getBody(doc *html.Node) *html.Node {
-	var body *html.Node
-	var findBody func(*html.Node)
-
-	findBody = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "body" {
-			body = n
-			return
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			findBody(c)
-		}
-	}
-
-	findBody(doc)
-	return body
+	return FindNode(doc, func(n *html.Node) bool {
+		return n.Type == html.ElementNode && n.Data == "body"
+	})
 }
 
 func (r *Reader) extractDescriptionFromReferences() (description string) {
