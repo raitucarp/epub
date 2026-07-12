@@ -1,9 +1,9 @@
 package epub
 
 import (
-	"github.com/raitucarp/epub/pkg"
-	"golang.org/x/net/html"
 	"testing"
+	"golang.org/x/net/html"
+	"github.com/raitucarp/epub/pkg"
 )
 
 func TestReadContentHTMLById(t *testing.T) {
