@@ -24,12 +24,8 @@ type TOC struct {
 
 // JSON marshals the table of contents structure into JSON format. This is useful
 // for external tools, logging, debugging, or serialization to other formats.
-func (t *TOC) JSON() (b []byte, err error) {
-	b, err = json.Marshal(t)
-	if err != nil {
-		return
-	}
-	return
+func (t *TOC) JSON() ([]byte, error) {
+	return json.Marshal(t)
 }
 
 // ReadContentHTML returns the content document associated with the currently
