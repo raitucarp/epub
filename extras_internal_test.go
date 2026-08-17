@@ -1,8 +1,9 @@
 package epub
 
 import (
-	"testing"
 	"github.com/raitucarp/epub/pkg"
+	"strings"
+	"testing"
 )
 
 func TestReader_Version(t *testing.T) {
@@ -33,7 +34,7 @@ func TestReader_Description_Metadata(t *testing.T) {
 	}
 
 	desc := r.Description()
-	if desc != "Primary Description" {
+	if strings.Join(desc, ", ") != "Primary Description" {
 		t.Errorf("expected 'Primary Description', got %q", desc)
 	}
 }
@@ -46,15 +47,15 @@ func TestReader_Description_OptionalMeta(t *testing.T) {
 					"description": []any{"Secondary Description"},
 				},
 			},
-            rendition: "default",
-            packagePubs: map[string]*pkg.Package{
-                "default": &pkg.Package{},
-            },
+			rendition: "default",
+			packagePubs: map[string]*pkg.Package{
+				"default": &pkg.Package{},
+			},
 		},
 	}
 
 	desc := r.Description()
-	if desc != "Secondary Description" {
+	if strings.Join(desc, ", ") != "Secondary Description" {
 		t.Errorf("expected 'Secondary Description', got %q", desc)
 	}
 }
@@ -70,16 +71,16 @@ func TestReader_Description_Spine(t *testing.T) {
 
 	r := &Reader{
 		epub: &Epub{
-			metadata: map[string]any{},
-            rendition: "default",
+			metadata:  map[string]any{},
+			rendition: "default",
 			packagePubs: map[string]*pkg.Package{
 				"default": p,
 			},
 			resources: []PublicationResource{
 				{
-					ID: "res1",
-					Href: "intro.xhtml",
-					Content: []byte(`<html xmlns:epub="http://www.idpf.org/2007/ops"><body><div epub:type="introduction">Spine Description</div></body></html>`),
+					ID:       "res1",
+					Href:     "intro.xhtml",
+					Content:  []byte(`<html xmlns:epub="http://www.idpf.org/2007/ops"><body><div epub:type="introduction">Spine Description</div></body></html>`),
 					MIMEType: pkg.MediaTypeXHTML,
 				},
 			},
@@ -87,7 +88,7 @@ func TestReader_Description_Spine(t *testing.T) {
 	}
 
 	desc := r.Description()
-	if desc != "Spine Description" {
+	if strings.Join(desc, ", ") != "Spine Description" {
 		t.Errorf("expected 'Spine Description', got %q", desc)
 	}
 }
@@ -103,16 +104,16 @@ func TestReader_Description_References(t *testing.T) {
 
 	r := &Reader{
 		epub: &Epub{
-			metadata: map[string]any{},
-            rendition: "default",
+			metadata:  map[string]any{},
+			rendition: "default",
 			packagePubs: map[string]*pkg.Package{
 				"default": p,
 			},
 			resources: []PublicationResource{
 				{
-					ID: "res1",
-					Href: "preface.xhtml",
-					Content: []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Preface Description</p></body></html>`),
+					ID:       "res1",
+					Href:     "preface.xhtml",
+					Content:  []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Preface Description</p></body></html>`),
 					MIMEType: pkg.MediaTypeXHTML,
 				},
 			},
@@ -120,7 +121,7 @@ func TestReader_Description_References(t *testing.T) {
 	}
 
 	desc := r.Description()
-	if desc != "Preface Description" {
+	if strings.Join(desc, ", ") != "Preface Description" {
 		t.Errorf("expected 'Preface Description', got %q", desc)
 	}
 }
@@ -129,7 +130,7 @@ func TestReader_Description_TOC(t *testing.T) {
 	// FirstFullContentTOCItem is used.
 	r := &Reader{
 		epub: &Epub{
-			metadata: map[string]any{},
+			metadata:  map[string]any{},
 			rendition: "default",
 			packagePubs: map[string]*pkg.Package{
 				"default": &pkg.Package{},
@@ -137,14 +138,14 @@ func TestReader_Description_TOC(t *testing.T) {
 			resources: []PublicationResource{
 				{
 					ID: "toc", Properties: "nav",
-					Href: "toc.xhtml",
-					Content: []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><nav epub:type="toc"><h1>TOC</h1><ol><li><a href="chap1.xhtml">Chapter 1</a></li></ol></nav></html>`),
+					Href:     "toc.xhtml",
+					Content:  []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><nav epub:type="toc"><h1>TOC</h1><ol><li><a href="chap1.xhtml">Chapter 1</a></li></ol></nav></html>`),
 					MIMEType: pkg.MediaTypeXHTML,
 				},
 				{
-					ID: "chap1",
-					Href: "chap1.xhtml",
-					Content: []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>TOC Description</p></body></html>`),
+					ID:       "chap1",
+					Href:     "chap1.xhtml",
+					Content:  []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><p>TOC Description</p></body></html>`),
 					MIMEType: pkg.MediaTypeXHTML,
 				},
 			},
@@ -152,7 +153,7 @@ func TestReader_Description_TOC(t *testing.T) {
 	}
 
 	desc := r.Description()
-	if desc != "TOC Description" {
+	if strings.Join(desc, ", ") != "TOC Description" {
 		t.Errorf("expected 'TOC Description', got %q", desc)
 	}
 }

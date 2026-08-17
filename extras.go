@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
-	"strings"
 	"unicode"
 
 	"golang.org/x/text/transform"
@@ -166,11 +165,12 @@ func (r *Reader) CoverBytes() (cover []byte, err error) {
 var titlePattern = regexp.MustCompile("title")
 
 // Title returns the publication's title metadata.
-func (r *Reader) Title() (title string) {
+func (r *Reader) Title() []string {
+	var titles []string
 	for key, value := range r.Metadata() {
 		if key == "title" {
-			title = strings.Join(value.([]string), ", ")
-			return
+			titles = append(titles, value.([]string)...)
+			return titles
 		}
 	}
 
@@ -188,39 +188,38 @@ func (r *Reader) Title() (title string) {
 				if err != nil {
 					continue
 				}
-				title = getTextByEpubType(htmlNode, "title")
-				return
+				t := getTextByEpubType(htmlNode, "title")
+				if t != "" {
+					return []string{t}
+				}
 			}
 		}
-	}
-
-	if title != "" {
-		return
 	}
 
 	for _, ref := range r.epub.resources {
 		if titlePattern.MatchString(ref.ID) || titlePattern.MatchString(ref.Href) {
 			htmlNode, _ := r.parseHTML(ref.Content)
-			title = getTextByEpubType(htmlNode, "title")
-			if title == "" {
-				getTextByEpubType(htmlNode, "fulltitle")
+			t := getTextByEpubType(htmlNode, "title")
+			if t == "" {
+				t = getTextByEpubType(htmlNode, "fulltitle")
 			}
 
-			if title != "" {
-				return
+			if t != "" {
+				return []string{t}
 			}
 		}
 	}
 
-	return
+	return titles
 }
 
 // Author returns the author (creator) metadata of the publication.
-func (r *Reader) Author() (author string) {
+func (r *Reader) Author() []string {
+	var authors []string
 	for key, value := range r.Metadata() {
 		if key == "creator" {
-			author = strings.Join(value.([]string), ", ")
-			return
+			authors = append(authors, value.([]string)...)
+			return authors
 		}
 	}
 
@@ -238,8 +237,10 @@ func (r *Reader) Author() (author string) {
 				if err != nil {
 					continue
 				}
-				author = getTextByEpubType(htmlNode, "author")
-				return
+				a := getTextByEpubType(htmlNode, "author")
+				if a != "" {
+					return []string{a}
+				}
 			}
 		}
 	}
@@ -247,60 +248,62 @@ func (r *Reader) Author() (author string) {
 	for _, ref := range r.epub.resources {
 		if titlePattern.MatchString(ref.ID) || titlePattern.MatchString(ref.Href) {
 			htmlNode, _ := r.parseHTML(ref.Content)
-			author = getTextByEpubType(htmlNode, "author")
+			a := getTextByEpubType(htmlNode, "author")
 
-			if author != "" {
-				return
+			if a != "" {
+				return []string{a}
 			}
 		}
 	}
 
-	return "Unknown"
+	if len(authors) == 0 {
+		return []string{"Unknown"}
+	}
+	return authors
 }
 
 // Language returns the primary language of the publication, as declared
 // in the package metadata (dc:language).
-func (r *Reader) Language() (language string) {
+func (r *Reader) Language() []string {
 	desc, descriptionExists := r.epub.metadata["language"]
 	if descriptionExists {
-		language = strings.Join(desc.([]string), ", ")
-		return
+		return desc.([]string)
 	}
-	return
+	return nil
 }
 
 // Identifier returns the primary identifier of the publication as declared
 // in the package metadata (often equivalent to UID).
-func (r *Reader) Identifier() (identifier string) {
+func (r *Reader) Identifier() []string {
 	desc, descriptionExists := r.epub.metadata["identifier"]
 	if descriptionExists {
-		identifier = strings.Join(desc.([]string), ", ")
-		return
+		return desc.([]string)
 	}
-	return
+	return nil
 }
 
 var descriptionPattern = regexp.MustCompile("description")
 
-func extractDescriptionFromMetadata(metadata map[string]any) (description string) {
+func extractDescriptionFromMetadata(metadata map[string]any) []string {
 	desc, descriptionExists := metadata["description"]
 	if descriptionExists {
-		description = strings.Join(desc.([]string), ", ")
+		return desc.([]string)
 	}
-	return
+	return nil
 }
 
-func extractDescriptionFromOptionalMeta(metadata map[string]any) (description string) {
+func extractDescriptionFromOptionalMeta(metadata map[string]any) []string {
 	meta, metaExists := metadata["meta"]
 	if !metaExists {
-		return
+		return nil
 	}
 
 	metaMap, isMetaMap := meta.(map[string]any)
 	if !isMetaMap {
-		return
+		return nil
 	}
 
+	var allDescriptions []string
 	for key, value := range metaMap {
 		if !descriptionPattern.MatchString(key) {
 			continue
@@ -311,17 +314,44 @@ func extractDescriptionFromOptionalMeta(metadata map[string]any) (description st
 			continue
 		}
 
-		descriptions := []string{}
 		for _, d := range desc {
 			if v, ok := d.(string); ok {
-				descriptions = append(descriptions, v)
+				allDescriptions = append(allDescriptions, v)
 			}
 		}
-
-		description = strings.Join(descriptions, ", ")
 	}
 
-	return
+	return allDescriptions
+}
+
+func extractDescriptionFromSummaryMeta(metadata map[string]any) []string {
+	meta, metaExists := metadata["meta"]
+	if !metaExists {
+		return nil
+	}
+
+	metaMap, isMetaMap := meta.(map[string]any)
+	if !isMetaMap {
+		return nil
+	}
+
+	for key, value := range metaMap {
+		if key != "summary" {
+			continue
+		}
+
+		desc, isSlice := value.([]any)
+		if !isSlice {
+			continue
+		}
+
+		for _, d := range desc {
+			if v, ok := d.(string); ok {
+				return []string{v}
+			}
+		}
+	}
+	return nil
 }
 
 func extractDescriptionFromEpubType(epubType string, htmlNode *html.Node) (description string) {
@@ -343,7 +373,7 @@ func extractDescriptionFromEpubType(epubType string, htmlNode *html.Node) (descr
 
 var coverPagePattern = regexp.MustCompile("cover")
 
-func (r *Reader) extractDescriptionFromSpine() (description string) {
+func (r *Reader) extractDescriptionFromSpine() []string {
 	spine := r.Spine()
 	introTypes := []string{"abstract", "foreword", "introduction", "preamble", "preface", "prologue"}
 	for _, res := range spine {
@@ -360,13 +390,13 @@ func (r *Reader) extractDescriptionFromSpine() (description string) {
 			if abstractIndex > -1 {
 				descByte, err := htmltomarkdown.ConvertNode(desc)
 				if err == nil {
-					return string(descByte)
+					return []string{string(descByte)}
 				}
 			}
 		}
 	}
 
-	return
+	return nil
 }
 
 func getBody(doc *html.Node) *html.Node {
@@ -375,11 +405,12 @@ func getBody(doc *html.Node) *html.Node {
 	})
 }
 
-func (r *Reader) extractDescriptionFromReferences() (description string) {
+func (r *Reader) extractDescriptionFromReferences() []string {
 	refs := r.References()
 
 	candidates := []pkg.GuideReferenceType{pkg.GuideRefText, pkg.GuideRefPreface, pkg.GuideRefForeword}
 
+	var description string
 	for _, candidate := range candidates {
 		if description != "" {
 			continue
@@ -393,13 +424,16 @@ func (r *Reader) extractDescriptionFromReferences() (description string) {
 		}
 	}
 
-	return
+	if description != "" {
+		return []string{description}
+	}
+	return nil
 }
 
-func (r *Reader) extractDescriptionFromFirstFullContentTOCItem() (description string) {
+func (r *Reader) extractDescriptionFromFirstFullContentTOCItem() []string {
 	toc, err := r.TableOfContents()
 	if err != nil {
-		return
+		return nil
 	}
 
 	var firstContentItem TOC
@@ -415,16 +449,18 @@ func (r *Reader) extractDescriptionFromFirstFullContentTOCItem() (description st
 	}
 
 	if firstContentItem.Title == "" {
-		return
+		return nil
 	}
 
 	content := r.ReadContentHTMLByHref(firstContentItem.Href)
 
 	body := getBody(content)
 	markdownBody, _ := htmltomarkdown.ConvertNode(body)
-	description = string(markdownBody)
 
-	return
+	if len(markdownBody) > 0 {
+		return []string{string(markdownBody)}
+	}
+	return nil
 }
 
 func convertDescriptionToMd(description string) string {
@@ -442,30 +478,44 @@ func convertDescriptionToMd(description string) string {
 }
 
 // Description returns the publication's description metadata if defined.
-func (r *Reader) Description() (description string) {
+func (r *Reader) Description() []string {
 	metadata := r.epub.metadata
-	description = extractDescriptionFromMetadata(metadata)
+	descriptions := extractDescriptionFromMetadata(metadata)
 
-	if description == "" {
-		description = extractDescriptionFromOptionalMeta(metadata)
+	if len(descriptions) == 0 {
+		descriptions = extractDescriptionFromOptionalMeta(metadata)
 	}
 
-	if description == "" {
-		description = r.extractDescriptionFromSpine()
+	if len(descriptions) == 0 {
+		descriptions = extractDescriptionFromSummaryMeta(metadata)
+		if len(descriptions) > 0 {
+			descByte, err := htmltomarkdown.ConvertString(descriptions[0])
+			if err == nil {
+				descriptions[0] = string(descByte)
+			}
+		}
 	}
 
-	if description == "" {
-		description = r.extractDescriptionFromReferences()
+	if len(descriptions) == 0 {
+		descriptions = r.extractDescriptionFromSpine()
 	}
 
-	if description == "" {
-		description = r.extractDescriptionFromFirstFullContentTOCItem()
+	if len(descriptions) == 0 {
+		descriptions = r.extractDescriptionFromReferences()
 	}
 
-	if description != "" {
-		description = convertDescriptionToMd(description)
+	if len(descriptions) == 0 {
+		descriptions = r.extractDescriptionFromFirstFullContentTOCItem()
 	}
-	return
+
+	var finalDesc []string
+	for _, desc := range descriptions {
+		if desc != "" {
+			finalDesc = append(finalDesc, convertDescriptionToMd(desc))
+		}
+	}
+
+	return finalDesc
 }
 
 // References returns the structural guide references defined in the package,

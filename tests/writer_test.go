@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/raitucarp/epub"
@@ -14,7 +15,7 @@ func TestCreateEpubWithoutRequiredFieldShouldFail(t *testing.T) {
 	}
 
 	epubWriter := epub.New("https://standardebooks.org/ebooks/arthur-conan-doyle/the-white-company")
-	epubWriter.Author(epubData.Author())
+	epubWriter.Author(strings.Join(epubData.Author(), ", "))
 
 	err = epubWriter.Write("./temp/new-book.epub")
 	if err == nil {
@@ -30,9 +31,9 @@ func TestCreateEpubSuccess(t *testing.T) {
 	}
 
 	identifier := epubData.Identifier()
-	epubWriter := epub.New(identifier)
-	epubWriter.Title(epubData.Title())
-	epubWriter.Languages(epubData.Language())
+	epubWriter := epub.New(strings.Join(identifier, ", "))
+	epubWriter.Title(strings.Join(epubData.Title(), ", "))
+	epubWriter.Languages(epubData.Language()...)
 	epubWriter.Subject("subject1", "Historical Fiction")
 
 	// contents := epubData.ContentDocumentXHTMLString()

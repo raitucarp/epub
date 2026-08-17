@@ -2,6 +2,7 @@ package tests
 
 import (
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/raitucarp/epub"
@@ -27,7 +28,7 @@ func (data *epubData) attachEpub(reader epub.Reader) {
 
 func (data *epubData) testTitle() func(t *testing.T) {
 	return func(t *testing.T) {
-		actual := data.epub.Title()
+		actual := strings.Join(data.epub.Title(), ", ")
 		expected := data.title
 
 		if actual != expected {
@@ -39,7 +40,7 @@ func (data *epubData) testTitle() func(t *testing.T) {
 
 func (data *epubData) testAuthor() func(t *testing.T) {
 	return func(t *testing.T) {
-		actual := data.epub.Author()
+		actual := strings.Join(data.epub.Author(), ", ")
 		expected := data.author
 
 		if actual != expected {
@@ -50,7 +51,7 @@ func (data *epubData) testAuthor() func(t *testing.T) {
 
 func (data *epubData) testDescription() func(t *testing.T) {
 	return func(t *testing.T) {
-		actual := data.epub.Description()
+		actual := strings.Join(data.epub.Description(), ", ")
 		expected := data.description
 
 		if actual != expected {
