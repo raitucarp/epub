@@ -264,7 +264,14 @@ func (w *Writer) AddContentFile(name string) (res PublicationResource, err error
 	if !filepath.IsLocal(name) {
 		return res, fmt.Errorf("invalid path: path must be local")
 	}
-	data, err := os.ReadFile(name)
+
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return res, err
+	}
+	defer root.Close()
+
+	data, err := root.ReadFile(name)
 	if err != nil {
 		return
 	}
@@ -331,7 +338,14 @@ func (w *Writer) CoverFile(name string) error {
 	if !filepath.IsLocal(name) {
 		return fmt.Errorf("invalid path: path must be local")
 	}
-	data, err := os.ReadFile(name)
+
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	data, err := root.ReadFile(name)
 	if err != nil {
 		return err
 	}
@@ -382,7 +396,14 @@ func (w *Writer) AddImageFile(name string) (res PublicationResource) {
 	if !filepath.IsLocal(name) {
 		return
 	}
-	data, err := os.ReadFile(name)
+
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return
+	}
+	defer root.Close()
+
+	data, err := root.ReadFile(name)
 	if err != nil {
 		return
 	}
