@@ -15,7 +15,7 @@ func TestCreateEpubWithoutRequiredFieldShouldFail(t *testing.T) {
 	}
 
 	epubWriter := epub.New("https://standardebooks.org/ebooks/arthur-conan-doyle/the-white-company")
-	epubWriter.Author(strings.Join(epubData.Author(), ", "))
+	epubWriter.Author(epubData.Author()...)
 
 	err = epubWriter.Write("./temp/new-book.epub")
 	if err == nil {

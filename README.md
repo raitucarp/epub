@@ -342,9 +342,9 @@ func New(pubId string) *Writer
 
 // Metadata configuration
 func (w *Writer) Title(title string) *Writer
-func (w *Writer) Author(author string) *Writer
+func (w *Writer) Author(author ...string) *Writer
 func (w *Writer) Language(lang string) *Writer
-func (w *Writer) Description(desc string) *Writer
+func (w *Writer) Description(desc ...string) *Writer
 func (w *Writer) Publisher(pub string) *Writer
 func (w *Writer) Date(date time.Time) *Writer
 
@@ -591,11 +591,11 @@ type Writer
 func New(pubId string) *Writer
 
 func (w *Writer) Title(...string)
-func (w *Writer) Author(string)
+func (w *Writer) Author(...string)
 func (w *Writer) Languages(...string)
 func (w *Writer) Date(time.Time)
-func (w *Writer) Description(string)
-func (w *Writer) Publisher(string)
+func (w *Writer) Description(...string)
+func (w *Writer) Publisher(...string)
 
 func (w *Writer) AddContent(filename string, content []byte) PublicationResource
 func (w *Writer) AddImage(name string, content []byte) PublicationResource
