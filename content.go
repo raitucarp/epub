@@ -357,7 +357,7 @@ func (r *Reader) parseMetadata() {
 
 	languages := []string{}
 	for _, language := range packageMetadata.Languages {
-		r.epub.metadata["language"] = append(languages, language.Value)
+		languages = append(languages, language.Value)
 	}
 	r.epub.metadata["language"] = languages
 

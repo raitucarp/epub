@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Access basic metadata
-	fmt.Println("Title:", r.Title())
+	fmt.Println("Title:", strings.Join(r.Title(), ", "))
 	fmt.Println("Author:", r.Author())
 	fmt.Println("Language:", r.Language())
 	fmt.Println("Identifier:", r.Identifier())
@@ -186,7 +186,7 @@ Access comprehensive publication metadata:
 r, _ := epub.OpenReader("book.epub")
 
 // Basic metadata
-title := r.Title()
+title := strings.Join(r.Title(), ", ")
 author := r.Author()
 language := r.Language()
 identifier := r.Identifier()
@@ -292,10 +292,10 @@ func NewReader(b []byte) (reader Reader, err error)
 func OpenReader(name string) (reader Reader, err error)
 
 // Metadata methods
-func (r *Reader) Title() string
-func (r *Reader) Author() string
-func (r *Reader) Identifier() string
-func (r *Reader) Language() string
+func (r *Reader) Title() []string
+func (r *Reader) Author() []string
+func (r *Reader) Identifier() []string
+func (r *Reader) Language() []string
 func (r *Reader) UID() string
 func (r *Reader) Version() string
 func (r *Reader) Metadata() map[string]any
@@ -342,9 +342,9 @@ func New(pubId string) *Writer
 
 // Metadata configuration
 func (w *Writer) Title(title string) *Writer
-func (w *Writer) Author(author string) *Writer
+func (w *Writer) Author(author ...string) *Writer
 func (w *Writer) Language(lang string) *Writer
-func (w *Writer) Description(desc string) *Writer
+func (w *Writer) Description(desc ...string) *Writer
 func (w *Writer) Publisher(pub string) *Writer
 func (w *Writer) Date(date time.Time) *Writer
 
@@ -533,7 +533,7 @@ func main() {
 
 	// Create new EPUB with modified metadata
 	w := epub.New("new-pub-id")
-	w.Title(r.Title() + " (Edition 2)")
+	w.Title(strings.Join(r.Title(), ", ") + " (Edition 2)")
 	w.Author(r.Author())
 	w.Language(r.Language())
 	w.Date(time.Now())
@@ -591,11 +591,11 @@ type Writer
 func New(pubId string) *Writer
 
 func (w *Writer) Title(...string)
-func (w *Writer) Author(string)
+func (w *Writer) Author(...string)
 func (w *Writer) Languages(...string)
 func (w *Writer) Date(time.Time)
-func (w *Writer) Description(string)
-func (w *Writer) Publisher(string)
+func (w *Writer) Description(...string)
+func (w *Writer) Publisher(...string)
 
 func (w *Writer) AddContent(filename string, content []byte) PublicationResource
 func (w *Writer) AddImage(name string, content []byte) PublicationResource

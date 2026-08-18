@@ -108,43 +108,53 @@ func (w *Writer) Title(title ...string) {
 }
 
 // Description sets a short description or summary for the publication.
-func (w *Writer) Description(description string) {
-	w.epub.SelectedPackage().Metadata.OptionalDC = append(
-		w.epub.SelectedPackage().Metadata.OptionalDC,
-		pkg.DCOptional{ID: "description", Value: description, XMLName: xml.Name{Local: "dc:description"}},
-	)
+func (w *Writer) Description(description ...string) {
+	for _, d := range description {
+		w.epub.SelectedPackage().Metadata.OptionalDC = append(
+			w.epub.SelectedPackage().Metadata.OptionalDC,
+			pkg.DCOptional{ID: "description", Value: d, XMLName: xml.Name{Local: "dc:description"}},
+		)
+	}
 }
 
 // Author sets the primary creator/author in the package metadata.
-func (w *Writer) Author(creator string) {
-	w.epub.SelectedPackage().Metadata.OptionalDC = append(
-		w.epub.SelectedPackage().Metadata.OptionalDC,
-		pkg.DCOptional{ID: "author", Value: creator, XMLName: xml.Name{Local: "dc:creator"}},
-	)
+func (w *Writer) Author(creator ...string) {
+	for _, c := range creator {
+		w.epub.SelectedPackage().Metadata.OptionalDC = append(
+			w.epub.SelectedPackage().Metadata.OptionalDC,
+			pkg.DCOptional{ID: "author", Value: c, XMLName: xml.Name{Local: "dc:creator"}},
+		)
+	}
 }
 
 // Creator adds a creator with a specific identifier attribute to the metadata.
-func (w *Writer) Creator(id string, creator string) {
-	w.epub.SelectedPackage().Metadata.OptionalDC = append(
-		w.epub.SelectedPackage().Metadata.OptionalDC,
-		pkg.DCOptional{ID: id, Value: creator, XMLName: xml.Name{Local: "dc:creator"}},
-	)
+func (w *Writer) Creator(id string, creator ...string) {
+	for _, c := range creator {
+		w.epub.SelectedPackage().Metadata.OptionalDC = append(
+			w.epub.SelectedPackage().Metadata.OptionalDC,
+			pkg.DCOptional{ID: id, Value: c, XMLName: xml.Name{Local: "dc:creator"}},
+		)
+	}
 }
 
 // Contributor adds a contributor entry of the specified role or type.
-func (w *Writer) Contributor(kind string, contributor string) {
-	w.epub.SelectedPackage().Metadata.OptionalDC = append(
-		w.epub.SelectedPackage().Metadata.OptionalDC,
-		pkg.DCOptional{ID: kind, Value: contributor, XMLName: xml.Name{Local: "dc:contributor"}},
-	)
+func (w *Writer) Contributor(kind string, contributor ...string) {
+	for _, c := range contributor {
+		w.epub.SelectedPackage().Metadata.OptionalDC = append(
+			w.epub.SelectedPackage().Metadata.OptionalDC,
+			pkg.DCOptional{ID: kind, Value: c, XMLName: xml.Name{Local: "dc:contributor"}},
+		)
+	}
 }
 
 // Subject adds a subject or theme classification to the publication.
-func (w *Writer) Subject(id string, subject string) {
-	w.epub.SelectedPackage().Metadata.OptionalDC = append(
-		w.epub.SelectedPackage().Metadata.OptionalDC,
-		pkg.DCOptional{ID: id, Value: subject, XMLName: xml.Name{Local: "dc:subject"}},
-	)
+func (w *Writer) Subject(id string, subject ...string) {
+	for _, s := range subject {
+		w.epub.SelectedPackage().Metadata.OptionalDC = append(
+			w.epub.SelectedPackage().Metadata.OptionalDC,
+			pkg.DCOptional{ID: id, Value: s, XMLName: xml.Name{Local: "dc:subject"}},
+		)
+	}
 }
 
 // LongDescription sets an extended descriptive summary.
@@ -164,8 +174,10 @@ func (w *Writer) Date(date time.Time) {
 }
 
 // Publisher sets the publication publisher.
-func (w *Writer) Publisher(publisher string) {
-	w.DublinCores(map[string]string{"publisher": publisher})
+func (w *Writer) Publisher(publisher ...string) {
+	for _, p := range publisher {
+		w.DublinCores(map[string]string{"publisher": p})
+	}
 }
 
 // DublinCores sets multiple Dublin Core metadata fields at once.
