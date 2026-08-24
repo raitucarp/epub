@@ -1,0 +1,16 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+  <head>
+    <title>CSS not applied to referenced SVG</title>
+    <style type="text/css">
+        .fil0 {
+          fill: url(#star);
+          stroke: green;
+          stroke-width: 15;
+        }
+    </style>
+  </head>
+  <body>
+    <p>Test passes if the image appears in solid (green) color. Test fails if the image appears appears filled with a repeated star-shaped pattern.</p>
+    <img src="img/001.svg" />
+  </body>
+</html>
