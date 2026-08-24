@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/raitucarp/epub/pkg"
@@ -61,14 +62,17 @@ func (z *OCFZipContainer) AddContainerXML(rootFiles ...string) (err error) {
 func addFileToZip(zipWriter *zip.Writer, filename string, content []byte) error {
 	// Create a header for the file
 	header := &zip.FileHeader{
-		Name:     filename,
-		Method:   zip.Deflate, // Use compression for all files
-		Modified: time.Now(),
+		Name:   filename,
+		Method: zip.Deflate, // Use compression for all files
 	}
 
-	// Special handling for mimetype file (must be uncompressed and first)
+	// Special handling for mimetype file (must be uncompressed and first).
+	// The OCF specification also requires it to have no extra field, so the
+	// modification timestamp (which Go encodes as an extra field) is omitted.
 	if filename == "mimetype" {
 		header.Method = zip.Store // No compression
+	} else {
+		header.Modified = time.Now()
 	}
 
 	// Create the file in the zip
@@ -92,8 +96,27 @@ func (z *OCFZipContainer) Write(filename string) (err error) {
 	zipWriter := zip.NewWriter(file)
 	defer zipWriter.Close()
 
-	for name, content := range z.files {
-		err := addFileToZip(zipWriter, name, content)
+	// The OCF specification requires the mimetype file to be the first
+	// entry in the ZIP archive and stored without compression. Write it
+	// explicitly before the remaining files to guarantee ordering.
+	if content, ok := z.files["mimetype"]; ok {
+		err := addFileToZip(zipWriter, "mimetype", content)
+		if err != nil {
+			return fmt.Errorf("error adding mimetype: %w", err)
+		}
+	}
+
+	// Write remaining files in a deterministic order.
+	names := make([]string, 0, len(z.files))
+	for name := range z.files {
+		if name != "mimetype" {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		err := addFileToZip(zipWriter, name, z.files[name])
 		if err != nil {
 			return fmt.Errorf("error adding %s: %w", name, err)
 		}
