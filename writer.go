@@ -173,6 +173,25 @@ func (w *Writer) Date(date time.Time) {
 	w.DublinCores(map[string]string{"date": dateString})
 }
 
+// Modified sets the last modification date (dcterms:modified) metadata, which
+// the EPUB specification requires in every package document. The value is
+// expressed in UTC using the extended ISO 8601 format (YYYY-MM-DDThh:mm:ssZ).
+func (w *Writer) Modified(date time.Time) {
+	w.Meta(pkg.Meta{Property: "dcterms:modified", Value: date.UTC().Format("2006-01-02T15:04:05Z")})
+}
+
+// ensureModifiedDate adds a dcterms:modified property if one is not already
+// present, as required by the EPUB specification.
+func (w *Writer) ensureModifiedDate() {
+	for _, meta := range w.epub.SelectedPackage().Metadata.Meta {
+		if meta.Property == "dcterms:modified" && meta.Refines == "" {
+			return
+		}
+	}
+
+	w.Modified(time.Now())
+}
+
 // Publisher sets the publication publisher.
 func (w *Writer) Publisher(publisher ...string) {
 	for _, p := range publisher {
@@ -428,10 +447,12 @@ func (w *Writer) AddImageFile(name string) (res PublicationResource) {
 
 // AddContent adds a content file (such as XHTML or SVG) to the publication
 // using the provided filename and raw bytes. Returns the created resource.
+// The media type is inferred from the filename extension; unknown extensions
+// default to XHTML.
 func (w *Writer) AddContent(filename string, content []byte) (res PublicationResource) {
 	href := filename
 	filePath := path.Join(w.contentDir, href)
-	mimeType := pkg.MediaTypeXHTML
+	mimeType := detectContentMediaType(filename, content)
 	base := filepath.Base(href)
 	res = w.addResource(
 		base,
@@ -444,6 +465,22 @@ func (w *Writer) AddContent(filename string, content []byte) (res PublicationRes
 
 	w.AddSpineItem(res)
 	return
+}
+
+// detectContentMediaType returns the media type for a content document based
+// on its filename extension, falling back to XHTML for unknown extensions.
+func detectContentMediaType(filename string, content []byte) string {
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".svg":
+		return pkg.MediaTypeSVG
+	case ".xhtml", ".html", ".htm", ".xml":
+		return pkg.MediaTypeXHTML
+	default:
+		if mime := http.DetectContentType(content); strings.HasPrefix(mime, "image/svg") {
+			return pkg.MediaTypeSVG
+		}
+		return pkg.MediaTypeXHTML
+	}
 }
 
 func (w *Writer) addResource(
@@ -525,6 +562,7 @@ func (w *Writer) TableOfContents(name string, toc TOC) (err error) {
 	})
 
 	w.epub.navigationCenterEXtended = &navigation
+	w.epub.SelectedPackage().Spine.TOC = name
 	ncxContent, err := xml.MarshalIndent(navigation, "", " ")
 	ncxBase := name + ".ncx"
 	ncxFilePath := path.Join(w.contentDir, ncxBase)
@@ -616,6 +654,8 @@ func (w *Writer) Write(filename string) (err error) {
 	if err != nil {
 		return err
 	}
+
+	w.ensureModifiedDate()
 
 	rootFiles := []string{}
 	for name, p := range w.epub.packagePubs {

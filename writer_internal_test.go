@@ -4,10 +4,62 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/raitucarp/epub/ncx"
 	"github.com/raitucarp/epub/pkg"
 )
+
+func TestWriter_Modified(t *testing.T) {
+	w := New("test-pub-id")
+	w.Modified(time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC))
+
+	metas := w.epub.SelectedPackage().Metadata.Meta
+	if len(metas) != 1 {
+		t.Fatalf("expected 1 meta element, got %d", len(metas))
+	}
+
+	if metas[0].Property != "dcterms:modified" {
+		t.Errorf("expected property dcterms:modified, got %q", metas[0].Property)
+	}
+	if metas[0].Value != "2024-01-02T03:04:05Z" {
+		t.Errorf("expected value 2024-01-02T03:04:05Z, got %q", metas[0].Value)
+	}
+}
+
+func TestWriter_EnsureModifiedDate(t *testing.T) {
+	t.Run("adds when missing", func(t *testing.T) {
+		w := New("test-pub-id")
+		w.ensureModifiedDate()
+
+		var found bool
+		for _, meta := range w.epub.SelectedPackage().Metadata.Meta {
+			if meta.Property == "dcterms:modified" && meta.Refines == "" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected dcterms:modified to be added")
+		}
+	})
+
+	t.Run("does not duplicate", func(t *testing.T) {
+		w := New("test-pub-id")
+		w.Modified(time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC))
+		w.ensureModifiedDate()
+
+		var count int
+		for _, meta := range w.epub.SelectedPackage().Metadata.Meta {
+			if meta.Property == "dcterms:modified" && meta.Refines == "" {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Errorf("expected exactly one dcterms:modified, got %d", count)
+		}
+	})
+}
 
 func TestWriter_GuardCheck(t *testing.T) {
 	tests := []struct {
