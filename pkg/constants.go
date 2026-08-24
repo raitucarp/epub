@@ -1,5 +1,18 @@
 package pkg
 
+// XML namespace URIs used across the EPUB package document and its
+// metadata sections. These are defined by the EPUB 3.3 specification and
+// its referenced vocabularies.
+const (
+	// NamespaceOPF is the namespace of the Package Document elements.
+	NamespaceOPF = "http://www.idpf.org/2007/opf"
+	// NamespaceDC is the namespace of the Dublin Core metadata elements.
+	NamespaceDC = "http://purl.org/dc/elements/1.1/"
+	// NamespaceOPS is the namespace of the EPUB content and reserved
+	// prefixes (epub:type and friends).
+	NamespaceOPS = "http://www.idpf.org/2007/ops"
+)
+
 // Constants for common property values
 const (
 	PropertyNav                = "nav"

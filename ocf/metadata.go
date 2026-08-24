@@ -6,7 +6,8 @@ import "encoding/xml"
 // Root element: metadata in namespace http://www.idpf.org/2013/metadata
 type Metadata struct {
 	XMLName xml.Name `xml:"http://www.idpf.org/2013/metadata metadata"`
-	// Content is flexible since this version doesn't define specific metadata
-	// Using Any to allow any namespace-qualified elements
-	Any []xml.Name `xml:",any"`
+	// The content model of this file is defined by the EPUB
+	// multiple-rendition specification; preserve the raw inner XML so that
+	// callers can process it without data loss.
+	Content any `xml:",innerxml"`
 }

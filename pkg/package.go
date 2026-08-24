@@ -23,25 +23,26 @@ type Package struct {
 
 // Metadata represents the metadata section
 type Metadata struct {
-	XMLName     xml.Name       `xml:"metadata"`
-	Identifiers []DCIdentifier `xml:"dc:identifier"`
-	Titles      []DCTitle      `xml:"dc:title"`
-	Languages   []DCLanguage   `xml:"dc:language"`
+	XMLName     xml.Name       `xml:"http://www.idpf.org/2007/opf metadata"`
+	Identifiers []DCIdentifier `xml:"http://purl.org/dc/elements/1.1/ identifier"`
+	Titles      []DCTitle      `xml:"http://purl.org/dc/elements/1.1/ title"`
+	Languages   []DCLanguage   `xml:"http://purl.org/dc/elements/1.1/ language"`
 	OptionalDC  []DCOptional   `xml:",any"`
-	Meta        []Meta         `xml:"meta"`
-	Links       []Link         `xml:"link,omitempty"`
+	Meta        []Meta         `xml:"http://www.idpf.org/2007/opf meta"`
+	Links       []Link         `xml:"http://www.idpf.org/2007/opf link,omitempty"`
 }
 
 // DCIdentifier represents dc:identifier element
 type DCIdentifier struct {
-	XMLName xml.Name `xml:"dc:identifier"`
+	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ identifier"`
+	Dir     string   `xml:"dir,attr,omitempty"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Value   string   `xml:",chardata"`
 }
 
 // DCTitle represents dc:title element
 type DCTitle struct {
-	XMLName xml.Name `xml:"dc:title"`
+	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ title"`
 	Dir     string   `xml:"dir,attr,omitempty"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Lang    string   `xml:"xml lang,attr,omitempty"`
@@ -50,7 +51,7 @@ type DCTitle struct {
 
 // DCLanguage represents dc:language element
 type DCLanguage struct {
-	XMLName xml.Name `xml:"dc:language"`
+	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ language"`
 	ID      string   `xml:"id,attr,omitempty"`
 	Value   string   `xml:",chardata"`
 }
@@ -66,7 +67,7 @@ type DCOptional struct {
 
 // Meta represents the meta element for generic metadata
 type Meta struct {
-	XMLName  xml.Name `xml:"meta"`
+	XMLName  xml.Name `xml:"http://www.idpf.org/2007/opf meta"`
 	Name     string   `xml:"name,attr,omitempty"`
 	Content  string   `xml:"content,attr,omitempty"`
 	Dir      string   `xml:"dir,attr,omitempty"`
@@ -80,7 +81,7 @@ type Meta struct {
 
 // Link represents the link element for associating resources
 type Link struct {
-	XMLName    xml.Name `xml:"link"`
+	XMLName    xml.Name `xml:"http://www.idpf.org/2007/opf link"`
 	Href       string   `xml:"href,attr"`
 	HrefLang   string   `xml:"hreflang,attr,omitempty"`
 	ID         string   `xml:"id,attr,omitempty"`
@@ -92,9 +93,9 @@ type Link struct {
 
 // Manifest represents the manifest section
 type Manifest struct {
-	XMLName xml.Name `xml:"manifest"`
+	XMLName xml.Name `xml:"http://www.idpf.org/2007/opf manifest"`
 	ID      string   `xml:"id,attr,omitempty"`
-	Items   []Item   `xml:"item"`
+	Items   []Item   `xml:"http://www.idpf.org/2007/opf item"`
 }
 
 type ManifestProperty string
@@ -112,7 +113,7 @@ const (
 
 // Item represents a publication resource in the manifest
 type Item struct {
-	XMLName      xml.Name         `xml:"item"`
+	XMLName      xml.Name         `xml:"http://www.idpf.org/2007/opf item"`
 	Fallback     string           `xml:"fallback,attr,omitempty"`
 	Href         string           `xml:"href,attr"`
 	ID           string           `xml:"id,attr"`
@@ -123,16 +124,16 @@ type Item struct {
 
 // Spine represents the spine section
 type Spine struct {
-	XMLName                  xml.Name  `xml:"spine"`
+	XMLName                  xml.Name  `xml:"http://www.idpf.org/2007/opf spine"`
 	ID                       string    `xml:"id,attr,omitempty"`
 	PageProgressionDirection string    `xml:"page-progression-direction,attr,omitempty"`
 	TOC                      string    `xml:"toc,attr,omitempty"`
-	ItemRefs                 []ItemRef `xml:"itemref"`
+	ItemRefs                 []ItemRef `xml:"http://www.idpf.org/2007/opf itemref"`
 }
 
 // ItemRef represents a reference to an item in the spine
 type ItemRef struct {
-	XMLName    xml.Name `xml:"itemref"`
+	XMLName    xml.Name `xml:"http://www.idpf.org/2007/opf itemref"`
 	ID         string   `xml:"id,attr,omitempty"`
 	IDRef      string   `xml:"idref,attr"`
 	Linear     string   `xml:"linear,attr,omitempty"`
@@ -218,7 +219,7 @@ func (e *GuideReferenceType) UnmarshalText(text []byte) error {
 
 // GuideReference represents a reference in the guide
 type GuideReference struct {
-	XMLName xml.Name           `xml:"reference"`
+	XMLName xml.Name           `xml:"http://www.idpf.org/2007/opf reference"`
 	Type    GuideReferenceType `xml:"type,attr"`
 	Title   string             `xml:"title,attr,omitempty"`
 	Href    string             `xml:"href,attr"`
@@ -227,32 +228,33 @@ type GuideReference struct {
 // Bindings represents deprecated bindings element
 type Bindings struct {
 	XMLName    xml.Name    `xml:"http://www.idpf.org/2007/opf bindings"`
-	MediaTypes []MediaType `xml:"mediaType"`
+	MediaTypes []MediaType `xml:"http://www.idpf.org/2007/opf mediaType"`
 }
 
 // MediaType represents a media type in bindings
 type MediaType struct {
-	XMLName   xml.Name `xml:"mediaType"`
+	XMLName   xml.Name `xml:"http://www.idpf.org/2007/opf mediaType"`
 	Handler   string   `xml:"handler,attr"`
 	MediaType string   `xml:"media-type,attr"`
 }
 
 // Collection represents a collection element
 type Collection struct {
-	XMLName     xml.Name            `xml:"collection"`
+	XMLName     xml.Name            `xml:"http://www.idpf.org/2007/opf collection"`
 	Dir         string              `xml:"dir,attr,omitempty"`
 	ID          string              `xml:"id,attr,omitempty"`
 	Role        string              `xml:"role,attr"`
 	Lang        string              `xml:"xml lang,attr,omitempty"`
-	Metadata    *CollectionMetadata `xml:"metadata,omitempty"`
-	Collections []Collection        `xml:"collection,omitempty"`
-	Links       []Link              `xml:"link,omitempty"`
+	Metadata    *CollectionMetadata `xml:"http://www.idpf.org/2007/opf metadata,omitempty"`
+	Collections []Collection        `xml:"http://www.idpf.org/2007/opf collection,omitempty"`
+	Links       []Link              `xml:"http://www.idpf.org/2007/opf link,omitempty"`
 }
 
 // CollectionMetadata represents metadata within a collection
 type CollectionMetadata struct {
-	XMLName xml.Name `xml:"metadata"`
+	XMLName xml.Name `xml:"http://www.idpf.org/2007/opf metadata"`
 	// Can contain similar content to main metadata but scoped to collection
-	Meta  []Meta `xml:"meta,omitempty"`
-	Links []Link `xml:"link,omitempty"`
+	Meta       []Meta       `xml:"http://www.idpf.org/2007/opf meta,omitempty"`
+	Links      []Link       `xml:"http://www.idpf.org/2007/opf link,omitempty"`
+	OptionalDC []DCOptional `xml:",any"`
 }

@@ -2,15 +2,17 @@ package ocf
 
 import "encoding/xml"
 
+const manifestNamespace = "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"
+
 type Manifest struct {
-	XMLName   xml.Name    `xml:"manifest:manifest"`
+	XMLName   xml.Name    `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 manifest"`
 	XMLNS     string      `xml:"xmlns:manifest,attr"`
-	Version   string      `xml:"manifest:version,attr"`
-	FileEntry []FileEntry `xml:"manifest:file-entry"`
+	Version   string      `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 version,attr"`
+	FileEntry []FileEntry `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 file-entry"`
 }
 
 type FileEntry struct {
-	MediaType string `xml:"manifest:media-type,attr"`
-	Version   string `xml:"manifest:version,attr,omitempty"`
-	FullPath  string `xml:"manifest:full-path,attr"`
+	MediaType string `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 media-type,attr"`
+	Version   string `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 version,attr,omitempty"`
+	FullPath  string `xml:"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0 full-path,attr"`
 }

@@ -112,7 +112,7 @@ func (w *Writer) Description(description ...string) {
 	for _, d := range description {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
 			w.epub.SelectedPackage().Metadata.OptionalDC,
-			pkg.DCOptional{ID: "description", Value: d, XMLName: xml.Name{Local: "dc:description"}},
+			pkg.DCOptional{ID: "description", Value: d, XMLName: xml.Name{Space: pkg.NamespaceDC, Local: "description"}},
 		)
 	}
 }
@@ -122,7 +122,7 @@ func (w *Writer) Author(creator ...string) {
 	for _, c := range creator {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
 			w.epub.SelectedPackage().Metadata.OptionalDC,
-			pkg.DCOptional{ID: "author", Value: c, XMLName: xml.Name{Local: "dc:creator"}},
+			pkg.DCOptional{ID: "author", Value: c, XMLName: xml.Name{Space: pkg.NamespaceDC, Local: "creator"}},
 		)
 	}
 }
@@ -132,7 +132,7 @@ func (w *Writer) Creator(id string, creator ...string) {
 	for _, c := range creator {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
 			w.epub.SelectedPackage().Metadata.OptionalDC,
-			pkg.DCOptional{ID: id, Value: c, XMLName: xml.Name{Local: "dc:creator"}},
+			pkg.DCOptional{ID: id, Value: c, XMLName: xml.Name{Space: pkg.NamespaceDC, Local: "creator"}},
 		)
 	}
 }
@@ -142,7 +142,7 @@ func (w *Writer) Contributor(kind string, contributor ...string) {
 	for _, c := range contributor {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
 			w.epub.SelectedPackage().Metadata.OptionalDC,
-			pkg.DCOptional{ID: kind, Value: c, XMLName: xml.Name{Local: "dc:contributor"}},
+			pkg.DCOptional{ID: kind, Value: c, XMLName: xml.Name{Space: pkg.NamespaceDC, Local: "contributor"}},
 		)
 	}
 }
@@ -152,7 +152,7 @@ func (w *Writer) Subject(id string, subject ...string) {
 	for _, s := range subject {
 		w.epub.SelectedPackage().Metadata.OptionalDC = append(
 			w.epub.SelectedPackage().Metadata.OptionalDC,
-			pkg.DCOptional{ID: id, Value: s, XMLName: xml.Name{Local: "dc:subject"}},
+			pkg.DCOptional{ID: id, Value: s, XMLName: xml.Name{Space: pkg.NamespaceDC, Local: "subject"}},
 		)
 	}
 }
@@ -187,7 +187,8 @@ func (w *Writer) DublinCores(keyVal map[string]string) {
 			w.epub.SelectedPackage().Metadata.OptionalDC,
 			pkg.DCOptional{
 				XMLName: xml.Name{
-					Local: strings.Join([]string{"dc", key}, ":"),
+					Space: pkg.NamespaceDC,
+					Local: key,
 				},
 				ID:    key,
 				Value: value,
@@ -239,7 +240,7 @@ func (w *Writer) Refines(refines string, property string, value string, otherAtt
 // Identifiers adds one or more identifiers to the package metadata.
 func (w *Writer) Identifiers(identifier ...string) {
 	for index, id := range identifier {
-		pubId := pkg.DCIdentifier{ID: "pub-id-" + strconv.Itoa(index), Value: id, XMLName: xml.Name{Local: "dc:identifier"}}
+		pubId := pkg.DCIdentifier{ID: "pub-id-" + strconv.Itoa(index), Value: id}
 		w.epub.SelectedPackage().Metadata.Identifiers = append(w.epub.SelectedPackage().Metadata.Identifiers, pubId)
 	}
 }
