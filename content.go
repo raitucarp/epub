@@ -132,7 +132,7 @@ func extractTitle(node *html.Node) string {
 	var title string
 
 	for desc := range node.Descendants() {
-		if desc.DataAtom == atom.Title {
+		if desc.DataAtom == atom.Title && desc.FirstChild != nil {
 			title = desc.FirstChild.Data
 		}
 	}
@@ -146,7 +146,7 @@ func getTextByEpubType(node *html.Node, attributeValue string) (text string) {
 			return attr.Key == "epub:type" && matched
 		})
 
-		if attrIndex > -1 {
+		if attrIndex > -1 && desc.FirstChild != nil {
 			text = desc.FirstChild.Data
 		}
 	}
@@ -165,7 +165,7 @@ func (r *Reader) ContentDocumentMarkdown() (documents map[string]string) {
 		cleanedHTML := cleanupHTML(res)
 		if title != "" {
 			frontMatters = fmt.Sprintf(`---
-title: %#v
+title: %q
 ---`, title)
 		}
 		md, err := htmltomarkdown.ConvertNode(cleanedHTML)
@@ -345,19 +345,19 @@ func (r *Reader) parseMetadata() {
 
 	identifiers := []string{}
 	for _, dcIdentifiers := range packageMetadata.Identifiers {
-		identifiers = append(identifiers, dcIdentifiers.Value)
+		identifiers = append(identifiers, normalizeWhitespace(dcIdentifiers.Value))
 	}
 	r.epub.metadata["identifiers"] = identifiers
 
 	titles := []string{}
 	for _, title := range packageMetadata.Titles {
-		titles = append(titles, title.Value)
+		titles = append(titles, normalizeWhitespace(title.Value))
 	}
 	r.epub.metadata["title"] = titles
 
 	languages := []string{}
 	for _, language := range packageMetadata.Languages {
-		languages = append(languages, language.Value)
+		languages = append(languages, normalizeWhitespace(language.Value))
 	}
 	r.epub.metadata["language"] = languages
 
@@ -367,7 +367,7 @@ func (r *Reader) parseMetadata() {
 			r.epub.metadata[name] = []string{}
 		}
 
-		r.epub.metadata[name] = append(r.epub.metadata[name].([]string), optional.Value)
+		r.epub.metadata[name] = append(r.epub.metadata[name].([]string), normalizeWhitespace(optional.Value))
 	}
 
 	r.epub.metadata["meta"] = map[string]any{}
@@ -376,7 +376,7 @@ func (r *Reader) parseMetadata() {
 
 		if name == "" {
 			name = meta.Name
-			r.epub.metadata["meta"].(map[string]any)[name] = meta.Content
+			r.epub.metadata["meta"].(map[string]any)[name] = normalizeWhitespace(meta.Content)
 			continue
 		}
 
@@ -385,13 +385,20 @@ func (r *Reader) parseMetadata() {
 		}
 
 		r.epub.metadata["meta"].(map[string]any)[name] = append(
-			r.epub.metadata["meta"].(map[string]any)[name].([]any), meta.Value)
+			r.epub.metadata["meta"].(map[string]any)[name].([]any), normalizeWhitespace(meta.Value))
 
 		r.epub.metadata["meta"].(map[string]any)[name] = slices.Compact(
 			r.epub.metadata["meta"].(map[string]any)[name].([]any),
 		)
 	}
 
+}
+
+// normalizeWhitespace collapses leading, trailing, and repeated internal
+// whitespace in a metadata value to a single space, as required by the EPUB
+// specification for textual metadata elements.
+func normalizeWhitespace(value string) string {
+	return strings.Join(strings.Fields(value), " ")
 }
 
 // Metadata returns the complete metadata block of the publication.

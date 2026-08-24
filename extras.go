@@ -19,11 +19,24 @@ import (
 	"golang.org/x/text/runes"
 )
 
-// UID returns the unique identifier of the publication.
+// UID returns the unique identifier of the publication. It resolves the
+// package's unique-identifier attribute to the matching dc:identifier entry.
 func (r *Reader) UID() (identifier string) {
-	for _, uid := range r.CurrentSelectedPackage().Metadata.Identifiers {
-		identifier = uid.Value
+	pkgMetadata := r.CurrentSelectedPackage().Metadata
+	identifiers := pkgMetadata.Identifiers
+
+	for _, uid := range identifiers {
+		if uid.ID == r.CurrentSelectedPackage().UniqueIdentifier {
+			return uid.Value
+		}
 	}
+
+	for _, uid := range identifiers {
+		if uid.Value != "" {
+			identifier = uid.Value
+		}
+	}
+
 	return
 }
 
@@ -45,8 +58,9 @@ func (r *Reader) getCoverInMetadata() (cover *image.Image) {
 
 		for key, value := range metaMap {
 			if coverImagePattern.MatchString(key) {
-				resId := value.(string)
-				cover = r.ReadImageById(resId)
+				if resId, ok := value.(string); ok {
+					cover = r.ReadImageById(resId)
+				}
 			}
 		}
 		return
@@ -275,7 +289,7 @@ func (r *Reader) Language() []string {
 // Identifier returns the primary identifier of the publication as declared
 // in the package metadata (often equivalent to UID).
 func (r *Reader) Identifier() []string {
-	desc, descriptionExists := r.epub.metadata["identifier"]
+	desc, descriptionExists := r.epub.metadata["identifiers"]
 	if descriptionExists {
 		return desc.([]string)
 	}
