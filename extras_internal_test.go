@@ -24,6 +24,52 @@ func TestReader_Version(t *testing.T) {
 	}
 }
 
+func TestReader_UID(t *testing.T) {
+	t.Run("resolves unique-identifier", func(t *testing.T) {
+		r := &Reader{
+			epub: &Epub{
+				rendition: "default",
+				packagePubs: map[string]*pkg.Package{
+					"default": {
+						UniqueIdentifier: "pub-id",
+						Metadata: pkg.Metadata{
+							Identifiers: []pkg.DCIdentifier{
+								{ID: "secondary", Value: "urn:other"},
+								{ID: "pub-id", Value: "urn:isbn:1234567890"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if got := r.UID(); got != "urn:isbn:1234567890" {
+			t.Errorf("expected %q, got %q", "urn:isbn:1234567890", got)
+		}
+	})
+
+	t.Run("falls back to last identifier", func(t *testing.T) {
+		r := &Reader{
+			epub: &Epub{
+				rendition: "default",
+				packagePubs: map[string]*pkg.Package{
+					"default": {
+						Metadata: pkg.Metadata{
+							Identifiers: []pkg.DCIdentifier{
+								{ID: "id-1", Value: "urn:first"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if got := r.UID(); got != "urn:first" {
+			t.Errorf("expected %q, got %q", "urn:first", got)
+		}
+	})
+}
+
 func TestReader_Description_Metadata(t *testing.T) {
 	r := &Reader{
 		epub: &Epub{
