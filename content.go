@@ -31,6 +31,7 @@ import (
 func (r *Reader) SelectPackageRendition(rendition string) {
 	r.epub.rendition = rendition
 	r.parseResources()
+	r.parseMetadata()
 }
 
 // CurrentSelectedPackage returns the currently active package rendition.

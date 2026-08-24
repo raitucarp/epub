@@ -20,6 +20,8 @@ type PublicationResource struct {
 }
 
 func (r *Reader) parseResources() {
+	r.epub.resources = nil
+	r.epub.navigationCenterEXtended = nil
 	allFiles := r.epub.zipContainer.AllFiles()
 	currentPackagePath := r.CurrentSelectedPackagePath()
 	for _, item := range r.CurrentSelectedPackage().Manifest.Items {

@@ -2,6 +2,8 @@ package epub
 
 import (
 	"encoding/xml"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/raitucarp/epub/ocf"
@@ -29,35 +31,13 @@ func newReaderFromZip(zipContainer *ocf.OCFZipContainer) (reader Reader, err err
 	}
 
 	reader.SelectPackageRendition("default")
-	reader.parseMetadata()
 	return
 
 }
 
 func (r *Reader) parseRootFiles(z *ocf.OCFZipContainer) (err error) {
-	for _, rootFile := range z.Container().RootFiles.RootFile {
+	for index, rootFile := range z.Container().RootFiles.RootFile {
 		packageFullPath := rootFile.FullPath
-
-		rendition := []string{"default"}
-		if rootFile.Media != "" {
-			rendition = append(rendition, rootFile.Media)
-		}
-
-		if rootFile.Layout != "" {
-			rendition = append(rendition, rootFile.Layout)
-		}
-
-		if rootFile.Language != "" {
-			rendition = append(rendition, rootFile.Language)
-		}
-
-		if rootFile.AccessMode != "" {
-			rendition = append(rendition, rootFile.AccessMode)
-		}
-
-		if rootFile.Label != "" {
-			rendition = append(rendition, rootFile.Label)
-		}
 
 		data, err := z.SelectFile(packageFullPath)
 		if err != nil {
@@ -70,12 +50,45 @@ func (r *Reader) parseRootFiles(z *ocf.OCFZipContainer) (err error) {
 			return err
 		}
 
-		renditionVars := strings.Join(rendition, "_")
+		renditionVars := renditionKey(rootFile, index)
 		r.epub.packagePaths[renditionVars] = packageFullPath
 		r.epub.packagePubs[renditionVars] = &packagePub
 	}
 
 	return nil
+}
+
+// renditionKey derives the key used to select a package rendition. The first
+// rootfile is always the default rendition, as defined by the EPUB
+// multiple-rendition specification. Subsequent renditions are keyed by their
+// rendition selection attributes.
+func renditionKey(rootFile ocf.RootFile, index int) string {
+	if index == 0 {
+		return "default"
+	}
+
+	parts := []string{}
+	if rootFile.Media != "" {
+		parts = append(parts, rootFile.Media)
+	}
+	if rootFile.Layout != "" {
+		parts = append(parts, rootFile.Layout)
+	}
+	if rootFile.Language != "" {
+		parts = append(parts, rootFile.Language)
+	}
+	if rootFile.AccessMode != "" {
+		parts = append(parts, rootFile.AccessMode)
+	}
+	if rootFile.Label != "" {
+		parts = append(parts, rootFile.Label)
+	}
+
+	if len(parts) > 0 {
+		return strings.Join(parts, "_")
+	}
+
+	return "rendition-" + strconv.Itoa(index)
 }
 
 // OpenReader opens an EPUB file from the provided file path and returns
@@ -87,6 +100,25 @@ func OpenReader(name string) (reader Reader, err error) {
 	}
 
 	return newReaderFromZip(zipContainer)
+}
+
+// ListRenditions returns the identifiers of all package renditions available
+// in the publication. The first rendition is always named "default".
+func (r *Reader) ListRenditions() []string {
+	renditions := make([]string, 0, len(r.epub.packagePubs))
+	for rendition := range r.epub.packagePubs {
+		renditions = append(renditions, rendition)
+	}
+
+	slices.Sort(renditions)
+
+	// Ensure the default rendition is always listed first.
+	if index := slices.Index(renditions, "default"); index > 0 {
+		renditions = slices.Delete(renditions, index, index+1)
+		renditions = slices.Insert(renditions, 0, "default")
+	}
+
+	return renditions
 }
 
 // NewReader creates a new Reader instance from a raw EPUB byte slice.
