@@ -43,6 +43,8 @@ func (r *Reader) parseResources() {
 			Properties: item.Properties,
 		})
 	}
+
+	r.deobfuscateFonts()
 }
 
 // Resources returns all publication resources declared in the manifest.
