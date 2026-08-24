@@ -31,8 +31,8 @@ func (t *TOC) JSON() ([]byte, error) {
 // selected table of contents entry. The returned document is parsed into an
 // html.Node tree. Behavior depends on TOC internal navigation selection state.
 func (t *TOC) ReadContentHTML() (content *html.Node) {
-	if t.Href != "" {
-		t.reader.ReadContentHTMLByHref(t.Href)
+	if t.Href != "" && t.reader != nil {
+		return t.reader.ReadContentHTMLByHref(t.Href)
 	}
 	return
 }
@@ -48,22 +48,46 @@ func (t *TOC) parseFromHTML(node *html.Node) error {
 }
 
 func (t *TOC) findNavNode(node *html.Node) *html.Node {
+	return findNavByType(node, "toc")
+}
+
+// findNavByType locates a nav element of the given epub:type within an HTML
+// node tree. The toc nav may also be identified by its doc-toc role.
+func findNavByType(node *html.Node, epubType string) *html.Node {
 	return FindNode(node, func(n *html.Node) bool {
-		if n.Type == html.ElementNode {
-			for _, attr := range n.Attr {
-				if attr.Val == "toc" {
-					return true
-				}
+		if n.Type != html.ElementNode || n.Data != "nav" {
+			return false
+		}
+
+		for _, attr := range n.Attr {
+			if attr.Key == "epub:type" && attr.Val == epubType {
+				return true
+			}
+			if epubType == "toc" && attr.Key == "role" && attr.Val == "doc-toc" {
+				return true
 			}
 		}
 		return false
 	})
 }
 
+// navDocument returns the parsed HTML node of the EPUB navigation document,
+// or nil if the publication does not declare one.
+func (r *Reader) navDocument() *html.Node {
+	resourceWithNavIndex := slices.IndexFunc(r.epub.resources, func(res PublicationResource) bool {
+		return res.Properties == "nav"
+	})
+	if resourceWithNavIndex < 0 {
+		return nil
+	}
+
+	return r.ReadContentHTMLById(r.epub.resources[resourceWithNavIndex].ID)
+}
+
 func (t *TOC) parseNav(navNode *html.Node) {
-	// Extract title from h2
+	// Extract title from the heading element (h1-h6), if present.
 	for c := navNode.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode {
+		if c.Type == html.ElementNode && isHeading(c.Data) {
 			t.Title = GetTextContent(c)
 			break
 		}
@@ -75,6 +99,15 @@ func (t *TOC) parseNav(navNode *html.Node) {
 			t.parseList(c)
 			break
 		}
+	}
+}
+
+func isHeading(name string) bool {
+	switch name {
+	case "h1", "h2", "h3", "h4", "h5", "h6":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -468,15 +501,9 @@ func addTOCItems(parent *html.Node, items []TOC) {
 // If both exist, behavior depends on publication version and priority rules.
 func (r *Reader) TableOfContents() (toc TOC, err error) {
 	toc.reader = r
-	resourceWithNavIndex := slices.IndexFunc(r.epub.resources, func(res PublicationResource) bool {
-		return res.Properties == "nav"
-	})
 
-	if resourceWithNavIndex > -1 {
-		tocRes := r.epub.resources[resourceWithNavIndex]
-
-		html := r.ReadContentHTMLById(tocRes.ID)
-		err = toc.parseFromHTML(html)
+	if doc := r.navDocument(); doc != nil {
+		err = toc.parseFromHTML(doc)
 		return
 	}
 
@@ -486,4 +513,106 @@ func (r *Reader) TableOfContents() (toc TOC, err error) {
 	}
 
 	return
+}
+
+// Landmark represents an entry in the landmarks navigation of the EPUB
+// navigation document. The Type field holds the epub:type semantic applied to
+// the landmark (e.g., "cover", "bodymatter", "toc").
+type Landmark struct {
+	Title string `json:"title,omitempty"`
+	Href  string `json:"href,omitempty"`
+	Type  string `json:"type,omitempty"`
+}
+
+// navListItem is an internal representation of a flat navigation entry.
+type navListItem struct {
+	Title string
+	Href  string
+	Type  string
+}
+
+// Landmarks returns the landmarks navigation, which identifies the key
+// structural points of the publication (e.g., cover, table of contents, and
+// body matter).
+func (r *Reader) Landmarks() []Landmark {
+	doc := r.navDocument()
+	if doc == nil {
+		return nil
+	}
+
+	navNode := findNavByType(doc, "landmarks")
+	if navNode == nil {
+		return nil
+	}
+
+	var landmarks []Landmark
+	for _, item := range parseFlatNavList(navNode) {
+		landmarks = append(landmarks, Landmark{Title: item.Title, Href: item.Href, Type: item.Type})
+	}
+	return landmarks
+}
+
+// PageList returns the page-list navigation, which maps the print page
+// breakpoints of the publication to their content locations.
+func (r *Reader) PageList() []Landmark {
+	doc := r.navDocument()
+	if doc == nil {
+		return nil
+	}
+
+	navNode := findNavByType(doc, "page-list")
+	if navNode == nil {
+		return nil
+	}
+
+	var pages []Landmark
+	for _, item := range parseFlatNavList(navNode) {
+		pages = append(pages, Landmark{Title: item.Title, Href: item.Href, Type: item.Type})
+	}
+	return pages
+}
+
+// parseFlatNavList parses the direct list items of a nav element (landmarks or
+// page-list) into a flat slice, preserving the title, href, and epub:type.
+func parseFlatNavList(navNode *html.Node) []navListItem {
+	var list *html.Node
+	for c := navNode.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && (c.Data == "ol" || c.Data == "ul") {
+			list = c
+			break
+		}
+	}
+
+	if list == nil {
+		return nil
+	}
+
+	var items []navListItem
+	for li := list.FirstChild; li != nil; li = li.NextSibling {
+		if li.Type != html.ElementNode || li.Data != "li" {
+			continue
+		}
+
+		item := navListItem{}
+		for c := li.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type != html.ElementNode || c.Data != "a" {
+				continue
+			}
+
+			for _, attr := range c.Attr {
+				switch attr.Key {
+				case "href":
+					item.Href = attr.Val
+				case "epub:type":
+					item.Type = attr.Val
+				}
+			}
+			item.Title = GetTextContent(c)
+			break
+		}
+
+		items = append(items, item)
+	}
+
+	return items
 }
