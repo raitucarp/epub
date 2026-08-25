@@ -89,7 +89,9 @@ func (z *OCFZipContainer) parseAllMetaInfFiles() error {
 	}
 
 	for reversedFileName, data := range reservedFiles {
-		parseMap[reversedFileName](data)
+		if err := parseMap[reversedFileName](data); err != nil {
+			return err
+		}
 	}
 
 	return nil
