@@ -730,3 +730,33 @@ func TestWriter_Write_InvalidPath(t *testing.T) {
 		t.Error("expected error writing to non-existent directory, got nil")
 	}
 }
+
+func TestWriter_WriteBytes(t *testing.T) {
+	w := New("urn:writebytes:123")
+	w.Title("Bytes Book")
+	w.Author("Jane Doe")
+	w.Languages("en")
+	w.AddContent("chapter.xhtml", []byte(`<html><body><p>Chapter</p></body></html>`))
+	if err := w.TableOfContents("toc", TOC{Items: []TOC{{Title: "Chapter", Href: "chapter.xhtml"}}}); err != nil {
+		t.Fatalf("TableOfContents: %v", err)
+	}
+
+	data, err := w.WriteBytes()
+	if err != nil {
+		t.Fatalf("WriteBytes error: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("expected non-empty bytes")
+	}
+
+	r, err := NewReader(data)
+	if err != nil {
+		t.Fatalf("failed to read back bytes: %v", err)
+	}
+	if got := r.Title(); len(got) != 1 || got[0] != "Bytes Book" {
+		t.Errorf("unexpected title: %v", got)
+	}
+	if got := r.UID(); got != "urn:writebytes:123" {
+		t.Errorf("unexpected uid: %q", got)
+	}
+}
