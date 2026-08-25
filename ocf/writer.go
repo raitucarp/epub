@@ -13,6 +13,8 @@ import (
 	"github.com/raitucarp/epub/pkg"
 )
 
+// NewOCFZipContainer creates an empty OCF ZIP container ready to be populated
+// with files and META-INF data.
 func NewOCFZipContainer() *OCFZipContainer {
 	return &OCFZipContainer{
 		files:   make(map[string][]byte),
@@ -20,14 +22,17 @@ func NewOCFZipContainer() *OCFZipContainer {
 	}
 }
 
+// AddFile stores the given content in the container at filePath.
 func (z *OCFZipContainer) AddFile(filePath string, content []byte) {
 	z.files[filePath] = content
 }
 
+// AddMimeType adds the required mimetype file to the container.
 func (z *OCFZipContainer) AddMimeType() {
 	z.AddFile("mimetype", []byte(MimeType))
 }
 
+// AddPackage marshals packageData and stores it in the container at filename.
 func (z *OCFZipContainer) AddPackage(filename string, packageData pkg.Package) (err error) {
 	content, err := xml.MarshalIndent(packageData, "", "  ")
 	if err != nil {
@@ -39,6 +44,8 @@ func (z *OCFZipContainer) AddPackage(filename string, packageData pkg.Package) (
 	return
 }
 
+// AddContainerXML writes a container.xml file listing the given root file
+// paths, each registered with the EPUB package media type.
 func (z *OCFZipContainer) AddContainerXML(rootFiles ...string) (err error) {
 	container := Container{Version: "1.0"}
 	container.XMLName.Space = "urn:oasis:names:tc:opendocument:xmlns:container"
@@ -86,6 +93,8 @@ func addFileToZip(zipWriter *zip.Writer, filename string, content []byte) error 
 	return err
 }
 
+// Write serializes the container to a ZIP archive at filename. The mimetype
+// file is written first, uncompressed, as required by the OCF specification.
 func (z *OCFZipContainer) Write(filename string) (err error) {
 	file, err := os.Create(filename)
 	if err != nil {
@@ -93,7 +102,13 @@ func (z *OCFZipContainer) Write(filename string) (err error) {
 	}
 	defer file.Close()
 
-	zipWriter := zip.NewWriter(file)
+	return z.WriteArchive(file)
+}
+
+// WriteArchive serializes the container as a ZIP archive to w. The mimetype
+// file is written first, uncompressed, as required by the OCF specification.
+func (z *OCFZipContainer) WriteArchive(w io.Writer) (err error) {
+	zipWriter := zip.NewWriter(w)
 	defer zipWriter.Close()
 
 	// The OCF specification requires the mimetype file to be the first

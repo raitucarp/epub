@@ -22,8 +22,8 @@ import (
 	"golang.org/x/net/html"
 )
 
-// Writer provides an interface for constructing, modifying, and writing
-// EPUB publications to disk or memory. Writer usage documentation is evolving.
+// Writer provides an interface for constructing and writing EPUB publications
+// to disk or memory.
 type Writer struct {
 	identifier string
 	epub       *Epub
@@ -333,7 +333,7 @@ func (w *Writer) Cover(cover []byte) (err error) {
 	return
 }
 
-// CoverPNG sets the publication cover image from an image.Image encoded as PNG
+// CoverPNG sets the publication cover image from an image.Image encoded as PNG.
 func (w *Writer) CoverPNG(cover image.Image) (err error) {
 	name := "cover"
 	content := name + ".png"
@@ -582,6 +582,9 @@ func (w *Writer) uniqueResourceName(name string) string {
 	}
 }
 
+// TableOfContents generates the EPUB navigation document and its legacy NCX
+// counterpart from the given TOC structure, using name as the base for the
+// generated file names.
 func (w *Writer) TableOfContents(name string, toc TOC) (err error) {
 	name = w.uniqueResourceName(name)
 
@@ -701,14 +704,30 @@ func (w *Writer) guardCheck() (err error) {
 
 // Write finalizes the EPUB structure and writes it to the specified filename.
 func (w *Writer) Write(filename string) (err error) {
-	err = w.guardCheck()
+	data, err := w.Build()
 	if err != nil {
 		return err
 	}
 
+	return os.WriteFile(filename, data, 0o644)
+}
+
+// WriteBytes finalizes the EPUB structure and returns the resulting bytes
+// without touching the filesystem.
+func (w *Writer) WriteBytes() ([]byte, error) {
+	return w.Build()
+}
+
+// Build assembles the package and container documents and serializes the
+// publication to an in-memory ZIP archive.
+func (w *Writer) Build() ([]byte, error) {
+	if err := w.guardCheck(); err != nil {
+		return nil, err
+	}
+
 	w.ensureModifiedDate()
 
-	rootFiles := []string{}
+	rootFiles := make([]string, 0, len(w.epub.packagePubs))
 	for name, p := range w.epub.packagePubs {
 		containerFilePath := path.Join(w.contentDir, name+".opf")
 		w.epub.zipContainer.AddPackage(containerFilePath, *p)
@@ -717,10 +736,10 @@ func (w *Writer) Write(filename string) (err error) {
 
 	w.epub.zipContainer.AddContainerXML(rootFiles...)
 
-	err = w.epub.zipContainer.Write(filename)
-	if err != nil {
-		return
+	var buf bytes.Buffer
+	if err := w.epub.zipContainer.WriteArchive(&buf); err != nil {
+		return nil, err
 	}
 
-	return
+	return buf.Bytes(), nil
 }
