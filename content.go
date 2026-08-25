@@ -47,17 +47,56 @@ func (r *Reader) CurrentSelectedPackagePath() string {
 }
 
 func (r *Reader) parseHTML(htmlByte []byte) (node *html.Node, err error) {
-	content := bytes.NewReader(htmlByte)
+	content := bytes.NewReader(fixSelfClosingTags(htmlByte))
 	node, err = html.Parse(content)
 
 	return
+}
+
+// isXHTMLContent reports whether a media type identifies an XHTML/HTML content
+// document. EPUB 2 publications commonly declare content documents using
+// text/html, while EPUB 3 uses application/xhtml+xml.
+func isXHTMLContent(mime string) bool {
+	return mime == pkg.MediaTypeXHTML || mime == pkg.MediaTypeHTML
+}
+
+// voidElements are the HTML elements that are defined as void and therefore
+// use self-closing syntax correctly. All other elements must not be
+// self-closed in HTML.
+var voidElements = map[string]bool{
+	"area": true, "base": true, "br": true, "col": true, "embed": true,
+	"hr": true, "img": true, "input": true, "link": true, "meta": true,
+	"param": true, "source": true, "track": true, "wbr": true,
+}
+
+// selfClosingTagPattern matches an XML-style self-closing start tag such as
+// <script ... />.
+var selfClosingTagPattern = regexp.MustCompile(`<([a-zA-Z][a-zA-Z0-9-]*)([^>]*?)\s*/>`)
+
+// fixSelfClosingTags rewrites XML-style self-closing tags for non-void HTML
+// elements into an explicit start/end tag pair. XHTML content documents use
+// XML syntax where <script ... /> is valid, but the HTML5 parser treats
+// self-closed non-void elements (especially raw-text elements like script) as
+// still open, swallowing the rest of the document.
+func fixSelfClosingTags(input []byte) []byte {
+	return selfClosingTagPattern.ReplaceAllFunc(input, func(m []byte) []byte {
+		sub := selfClosingTagPattern.FindSubmatch(m)
+		if sub == nil {
+			return m
+		}
+		tag := strings.ToLower(string(sub[1]))
+		if voidElements[tag] {
+			return m
+		}
+		return []byte("<" + string(sub[1]) + string(sub[2]) + "></" + string(sub[1]) + ">")
+	})
 }
 
 // ListContentDocumentIds returns the IDs of all content documents
 // (XHTML/SVG) registered in the publication manifest.
 func (r *Reader) ListContentDocumentIds() (ids []string) {
 	for _, res := range r.Resources() {
-		if res.MIMEType == pkg.MediaTypeXHTML {
+		if isXHTMLContent(res.MIMEType) {
 			ids = append(ids, res.ID)
 		}
 	}
@@ -84,7 +123,7 @@ func (r *Reader) ContentDocumentXHTML() (documents map[string]*html.Node) {
 	documents = make(map[string]*html.Node)
 
 	for _, res := range r.epub.resources {
-		if res.MIMEType == pkg.MediaTypeXHTML {
+		if isXHTMLContent(res.MIMEType) {
 			node, err := r.parseHTML(res.Content)
 
 			if err != nil {
@@ -161,35 +200,43 @@ func (r *Reader) ContentDocumentMarkdown() (documents map[string]string) {
 	documents = make(map[string]string)
 
 	for resId, res := range resourcesHtml {
-		frontMatters := ""
-		title := extractTitle(res)
-		cleanedHTML := cleanupHTML(res)
-		if title != "" {
-			frontMatters = fmt.Sprintf(`---
-title: %q
----`, title)
+		if md := nodeToMarkdown(res); md != "" {
+			documents[resId] = md
 		}
-		md, err := htmltomarkdown.ConvertNode(cleanedHTML)
-		if err != nil {
-			continue
-		}
-
-		markdownString := string(md)
-		t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-		markdownString, _, _ = transform.String(t, markdownString)
-		if frontMatters != "" {
-			markdownString = frontMatters + "\n" + string(markdownString)
-		}
-		documents[resId] = markdownString
 	}
 	return
+}
+
+// nodeToMarkdown converts a parsed HTML node tree into a Markdown string,
+// prepending a YAML front-matter block when the document defines a title.
+func nodeToMarkdown(node *html.Node) string {
+	frontMatters := ""
+	title := extractTitle(node)
+	cleanedHTML := cleanupHTML(node)
+	if title != "" {
+		frontMatters = fmt.Sprintf(`---
+title: %q
+---`, title)
+	}
+	md, err := htmltomarkdown.ConvertNode(cleanedHTML)
+	if err != nil {
+		return ""
+	}
+
+	markdownString := string(md)
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	markdownString, _, _ = transform.String(t, markdownString)
+	if frontMatters != "" {
+		markdownString = frontMatters + "\n" + markdownString
+	}
+	return markdownString
 }
 
 // ReadContentHTMLById returns the XHTML/HTML content document associated
 // with the given manifest ID, parsed into an html.Node tree.
 func (r *Reader) ReadContentHTMLById(id string) (doc *html.Node) {
 	for _, res := range r.epub.resources {
-		if res.ID == id && res.MIMEType == pkg.MediaTypeXHTML {
+		if res.ID == id && isXHTMLContent(res.MIMEType) {
 			node, err := r.parseHTML(res.Content)
 			if err == nil {
 				return node
@@ -218,12 +265,30 @@ func (r *Reader) ReadContentHTMLByHref(href string) (doc *html.Node) {
 // ReadContentMarkdownById returns a Markdown string representation of the
 // content document associated with the given manifest ID.
 func (r *Reader) ReadContentMarkdownById(id string) (md string) {
-	resourcesMd := r.ContentDocumentMarkdown()
-	for resId, res := range resourcesMd {
-		if resId == id {
-			return res
+	for _, res := range r.epub.resources {
+		if res.ID == id && isXHTMLContent(res.MIMEType) {
+			node, err := r.parseHTML(res.Content)
+			if err != nil {
+				return ""
+			}
+			return nodeToMarkdown(node)
 		}
 	}
+	return
+}
+
+// ReadContentMarkdownByHref returns a Markdown string representation of the
+// content document associated with the given manifest href.
+func (r *Reader) ReadContentMarkdownByHref(href string) (md string) {
+	contentIndex := slices.IndexFunc(r.epub.resources, func(r PublicationResource) bool {
+		return r.Href == href
+	})
+
+	if contentIndex > -1 {
+		res := r.epub.resources[contentIndex]
+		return r.ReadContentMarkdownById(res.ID)
+	}
+
 	return
 }
 
@@ -245,13 +310,13 @@ func (r *Reader) ReadImageById(id string) (img *image.Image) {
 // ReadImageByHref returns the image resource referenced by the given href,
 // if present in the manifest.
 func (r *Reader) ReadImageByHref(href string) (img *image.Image) {
-	cleanHref := filepath.Base(filepath.Dir(href)) + "/" + filepath.Base(href)
-	cleanHref = filepath.ToSlash(cleanHref)
+	cleanHref := filepath.ToSlash(filepath.Clean(href))
 
 	for _, res := range r.epub.resources {
 		isImage := slices.Contains(pkg.ImageMediaTypes, res.MIMEType)
+		resHref := filepath.ToSlash(filepath.Clean(res.Href))
 
-		if res.Href == cleanHref && isImage {
+		if resHref == cleanHref && isImage {
 			reader := bytes.NewReader(res.Content)
 			newImage, _, err := image.Decode(reader)
 			if err != nil {
@@ -264,6 +329,33 @@ func (r *Reader) ReadImageByHref(href string) (img *image.Image) {
 	return
 }
 
+// ReadImageBytesById returns the raw bytes of the image resource associated
+// with the given manifest ID.
+func (r *Reader) ReadImageBytesById(id string) []byte {
+	for _, res := range r.epub.resources {
+		if res.ID == id {
+			return res.Content
+		}
+	}
+	return nil
+}
+
+// ReadImageBytesByHref returns the raw bytes of the image resource referenced
+// by the given href, if present in the manifest.
+func (r *Reader) ReadImageBytesByHref(href string) []byte {
+	cleanHref := filepath.ToSlash(filepath.Clean(href))
+
+	for _, res := range r.epub.resources {
+		isImage := slices.Contains(pkg.ImageMediaTypes, res.MIMEType)
+		resHref := filepath.ToSlash(filepath.Clean(res.Href))
+
+		if resHref == cleanHref && isImage {
+			return res.Content
+		}
+	}
+	return nil
+}
+
 // ContentDocumentSVG returns SVG content documents parsed into html.Node trees.
 // The returned map is keyed by EPUB manifest item ID.
 func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node) {
@@ -271,7 +363,7 @@ func (r *Reader) ContentDocumentSVG() (documents map[string]*html.Node) {
 
 	for _, res := range r.epub.resources {
 		if res.MIMEType == pkg.MediaTypeSVG {
-			content := bytes.NewReader(res.Content)
+			content := bytes.NewReader(fixSelfClosingTags(res.Content))
 			node, err := html.Parse(content)
 			if err != nil {
 				continue
