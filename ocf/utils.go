@@ -1,25 +1,14 @@
 package ocf
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 )
 
-func getRootDirectory(path string) string {
-	cleanPath := filepath.Clean(path)
-
-	// Split the path and return the first component
-	parts := strings.Split(cleanPath, string(filepath.Separator))
-	if len(parts) > 0 && parts[0] != "" {
-		return parts[0]
-	}
-
-	volume := filepath.VolumeName(path)
-
-	if volume != "" {
-		// Windows path with drive letter
-		return volume + string(filepath.Separator)
-	}
-	// Unix-like path
-	return string(filepath.Separator)
+// getRootDirectory returns the first path component (the root directory) of a
+// slash-separated path. OCF container paths always use forward slashes.
+func getRootDirectory(p string) string {
+	clean := path.Clean(p)
+	root, _, _ := strings.Cut(clean, "/")
+	return root
 }
