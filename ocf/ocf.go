@@ -96,7 +96,7 @@ func (z *OCFZipContainer) parseAllMetaInfFiles() error {
 }
 
 func (z *OCFZipContainer) MimeType() string {
-	return string(z.files["mimetype"])
+	return strings.TrimSpace(string(z.files["mimetype"]))
 }
 
 func (z *OCFZipContainer) Container() *Container {
