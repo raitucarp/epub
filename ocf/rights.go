@@ -7,5 +7,5 @@ import "encoding/xml"
 type Rights struct {
 	XMLName xml.Name `xml:"rights"`
 	// Since the structure is reserved but not defined, use flexible content
-	Content any `xml:",innerxml"` // Store raw XML for rights expressions
+	Content string `xml:",innerxml"` // Store raw XML for rights expressions
 }

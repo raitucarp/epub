@@ -9,5 +9,5 @@ type Metadata struct {
 	// The content model of this file is defined by the EPUB
 	// multiple-rendition specification; preserve the raw inner XML so that
 	// callers can process it without data loss.
-	Content any `xml:",innerxml"`
+	Content string `xml:",innerxml"`
 }
