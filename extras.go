@@ -2,6 +2,7 @@ package epub
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -160,6 +161,9 @@ func (r *Reader) Cover() (cover *image.Image) {
 // An error is returned if the publication does not define a cover.
 func (r *Reader) CoverBytes() (cover []byte, err error) {
 	coverImage := r.Cover()
+	if coverImage == nil {
+		return nil, errors.New("no cover image defined in the publication")
+	}
 
 	buf := new(bytes.Buffer)
 
@@ -168,6 +172,7 @@ func (r *Reader) CoverBytes() (cover []byte, err error) {
 		return buf.Bytes(), err
 	}
 
+	buf.Reset()
 	err = jpeg.Encode(buf, *coverImage, &jpeg.Options{Quality: 70})
 	if err == nil {
 		return buf.Bytes(), err
