@@ -25,6 +25,7 @@ func newContainerAndParse(file *zip.Reader) (container *OCFZipContainer, err err
 	return container, nil
 }
 
+// OpenReader opens the OCF ZIP container stored at name.
 func OpenReader(name string) (container *OCFZipContainer, err error) {
 	z, err := zip.OpenReader(name)
 	if err != nil {
@@ -35,6 +36,7 @@ func OpenReader(name string) (container *OCFZipContainer, err error) {
 	return newContainerAndParse(&z.Reader)
 }
 
+// NewReader parses an OCF ZIP container from the raw bytes b.
 func NewReader(b []byte) (container *OCFZipContainer, err error) {
 	byteReader := bytes.NewReader(b)
 

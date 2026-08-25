@@ -98,8 +98,10 @@ type Manifest struct {
 	Items   []Item   `xml:"http://www.idpf.org/2007/opf item"`
 }
 
+// ManifestProperty is the type of the properties attribute of a manifest item.
 type ManifestProperty string
 
+// Manifest property values recognized by the EPUB specification.
 const (
 	NotProperty            ManifestProperty = ""
 	CoverImageProperty     ManifestProperty = "cover-image"
@@ -146,8 +148,10 @@ type Guide struct {
 	References []GuideReference `xml:"reference"`
 }
 
+// GuideReferenceType is the type of the type attribute of a guide reference.
 type GuideReferenceType string
 
+// Guide reference types recognized by the EPUB specification.
 const (
 	GuideRefCover            GuideReferenceType = "cover"
 	GuideRefTitlePage        GuideReferenceType = "title-page"
@@ -168,10 +172,13 @@ const (
 	GuideRefText             GuideReferenceType = "text"
 )
 
+// MarshalText implements encoding.TextMarshaler.
 func (e GuideReferenceType) MarshalText() ([]byte, error) {
 	return []byte(e), nil
 }
 
+// UnmarshalText implements encoding.TextUnmarshaler. Unknown values are
+// preserved verbatim rather than returning an error.
 func (e *GuideReferenceType) UnmarshalText(text []byte) error {
 	s := string(text)
 	switch s {

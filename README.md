@@ -1,611 +1,281 @@
-**Disclaimer: Starting from June 2026, this repository is written by the collaboration of @raitucarp and Google Jules.**
+# epub
 
-# Go EPUB Library
+`epub` is a Go library for reading and writing [EPUB](https://www.w3.org/TR/epub-33/)
+publications. It implements the EPUB 3.3 specification, including the Open
+Container Format (OCF), the package document, the EPUB navigation document, and
+the legacy NCX format used by EPUB 2.
 
-<div align="center">
+The library provides two main entry points:
 
-![EPUB](https://img.shields.io/badge/EPUB-3.3-blue)
-[![Go Reference](https://pkg.go.dev/badge/github.com/raitucarp/epub.svg)](https://pkg.go.dev/github.com/raitucarp/epub)
-[![Go Version](https://img.shields.io/badge/Go-1.25.3-blue.svg)](https://golang.org/dl/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.md)
-[![GitHub](https://img.shields.io/badge/GitHub-raitucarp%2Fepub-black.svg)](https://github.com/raitucarp/epub)
+- [`Reader`](https://pkg.go.dev/github.com/raitucarp/epub#Reader) for inspecting
+  the metadata, resources, navigation, and content of an existing publication.
+- [`Writer`](https://pkg.go.dev/github.com/raitucarp/epub#Writer) for building
+  new publications, including from Markdown sources.
 
-A robust, feature-rich Go library for reading and writing EPUB publications with full support for the EPUB 3.3 specification.
+## Installation
 
-[📚 Documentation](#reader-api-overview) • [🚀 Quick Start](#quick-start) • [✨ Features](#features) • [📦 Installation](#installation)
-
-</div>
-
----
-
-## 📋 Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-  - [Reading EPUB Files](#reading-epub-files)
-  - [Writing EPUB Files](#writing-epub-files)
-- [Core Capabilities](#core-capabilities)
-  - [Metadata Access](#metadata-access)
-  - [Content Processing](#content-processing)
-  - [Resource Management](#resource-management)
-  - [Navigation Support](#navigation-support)
-  - [Image Handling](#image-handling)
-- [API Overview](#reader-api-overview)
-  - [Reader API](#reader-api)
-  - [Writer API](#writer-api)
-- [Advanced Usage](#advanced-usage)
-- [Supported Content Types](#supported-content-types)
-- [Examples](#examples)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## ✨ Features
-
-### Core Reading Capabilities
-
-- ✅ Parse EPUB 3.3 container, metadata, manifest, spine, guide, and navigation structures
-- ✅ Full support for EPUB 2 and EPUB 3 specifications
-- ✅ Multiple package rendition support for flexible reading layouts
-
-### Content Processing
-
-- 📄 Read content documents in multiple formats:
-  - XHTML (native support)
-  - Markdown (auto-converted from HTML)
-  - SVG (scalable vector graphics)
-- 🔄 Automatic HTML-to-Markdown conversion with customizable options
-- 🎯 Precise HTML node parsing and manipulation
-
-### Resource Management
-
-- 📦 Extract and access all publication resources (images, stylesheets, fonts, etc.)
-- 🖼️ Extract images in raw bytes or as `image.Image` objects
-- 🔍 Query resources by ID or href reference
-
-### Metadata & Navigation
-
-- 🏷️ Complete metadata access (title, author, language, identifier, etc.)
-- 📑 Table of Contents (TOC) support for both NAV (EPUB 3) and NCX (EPUB 2)
-- 🗺️ Navigation structure abstraction for seamless cross-version compatibility
-- 📊 JSON serializable TOC for external tools and integrations
-
-### Writing Capabilities
-
-- 🛠️ Generate new EPUB files programmatically
-- 📝 Add content documents (XHTML/HTML)
-- 🖼️ Embed images with automatic format detection
-- ⚙️ Full package metadata configuration
-- 📚 Automatic spine and manifest generation
-
----
-
-## 📦 Installation
-
-```bash
+```sh
 go get github.com/raitucarp/epub
 ```
 
-**Requires Go 1.25.3 or higher**
+Requires Go 1.25 or later.
 
----
+## Quick start
 
-## 🚀 Quick Start
-
-### Reading EPUB Files
+### Read an EPUB
 
 ```go
-package main
+book, err := epub.OpenReader("book.epub")
+if err != nil {
+    log.Fatal(err)
+}
 
-import (
-	"fmt"
-	"log"
-	"github.com/raitucarp/epub"
-)
+fmt.Println("Title:", strings.Join(book.Title(), ", "))
+fmt.Println("Author:", strings.Join(book.Author(), ", "))
+fmt.Println("Language:", strings.Join(book.Language(), ", "))
+fmt.Println("Identifier:", book.UID())
 
-func main() {
-	// Open an EPUB file
-	r, err := epub.OpenReader("example.epub")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Access basic metadata
-	fmt.Println("Title:", strings.Join(r.Title(), ", "))
-	fmt.Println("Author:", r.Author())
-	fmt.Println("Language:", r.Language())
-	fmt.Println("Identifier:", r.Identifier())
-	fmt.Println("Version:", r.Version())
-
-	// Iterate through content documents
-	ids := r.ListContentDocumentIds()
-	for _, id := range ids {
-		html := r.ReadContentHTMLById(id)
-		fmt.Printf("Content for %s: %v\n", id, html)
-	}
-
-	// Access table of contents
-	toc := r.TOC()
-	fmt.Printf("TOC: %s\n", toc.Title)
+for _, id := range book.ListContentDocumentIds() {
+    fmt.Println(book.ReadContentMarkdownById(id))
 }
 ```
 
-### Writing EPUB Files
+### Write an EPUB
 
 ```go
-package main
+w := epub.New("urn:isbn:9780000000001")
+w.Title("A Book")
+w.Author("Jane Doe")
+w.Languages("en")
 
-import (
-	"log"
-	"time"
-	"github.com/raitucarp/epub"
-)
+w.AddContent("chapter-1.xhtml", []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Chapter 1</h1><p>Hello, world.</p></body></html>`))
 
-func main() {
-	// Create a new EPUB writer
-	w := epub.New("pub-id-001")
-	w.Title("My First Book")
-	w.Author("Jane Doe")
-	w.Language("en")
-	w.Date(time.Now())
-	w.Description("An example EPUB publication")
-	w.Publisher("Indie Press")
+toc := epub.TOC{
+    Title: "Contents",
+    Items: []epub.TOC{{Title: "Chapter 1", Href: "chapter-1.xhtml"}},
+}
+if err := w.TableOfContents("toc", toc); err != nil {
+    log.Fatal(err)
+}
 
-	// Add HTML content
-	w.AddContent("chapter1.xhtml", []byte(`
-		<html>
-			<body>
-				<h1>Chapter 1: The Beginning</h1>
-				<p>Once upon a time...</p>
-			</body>
-		</html>
-	`))
-
-	// Add an image
-	imageData := []byte{/* ... */}
-	w.AddImageContent("cover.png", imageData)
-
-	// Write to disk
-	if err := w.Write("output.epub"); err != nil {
-		log.Fatal(err)
-	}
+if err := w.Write("book.epub"); err != nil {
+    log.Fatal(err)
 }
 ```
 
----
+### Write an EPUB from Markdown
 
-## 🎯 Core Capabilities
-
-### Metadata Access
-
-Access comprehensive publication metadata:
+A single Markdown document can be converted directly:
 
 ```go
-r, _ := epub.OpenReader("book.epub")
+w := epub.New("urn:isbn:9780000000001")
+w.Title("A Markdown Book")
+w.Languages("en")
 
-// Basic metadata
-title := strings.Join(r.Title(), ", ")
-author := r.Author()
-language := r.Language()
-identifier := r.Identifier()
-uid := r.UID()                    // Unique identifier
-version := r.Version()            // EPUB version
-metadata := r.Metadata()          // Full metadata map
-cover := r.GetCover()             // Cover image
+if _, err := w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nOnce upon a time...\n")); err != nil {
+    log.Fatal(err)
+}
 ```
 
-### Content Processing
-
-Read and process content in multiple formats:
+Or an entire directory of Markdown files can be assembled, with the table of
+contents derived from the headings in each file:
 
 ```go
-// Get HTML content node
-htmlNode := r.ReadContentHTMLById("chapter1")
-htmlByHref := r.ReadContentHTMLByHref("text/chapter1.xhtml")
+w := epub.New("urn:isbn:9780000000001")
+w.Title("A Markdown Book")
+w.Author("Jane Doe")
+w.Languages("en")
 
-// Convert HTML to Markdown
-markdown := r.ReadContentMarkdownById("chapter1")
-markdownByHref := r.ReadContentMarkdownByHref("text/chapter1.xhtml")
+if err := w.AddMarkdownDirectory("manuscript"); err != nil {
+    log.Fatal(err)
+}
 
-// Access raw content
-rawContent := r.ReadContentById("chapter1")
+if err := w.Write("book.epub"); err != nil {
+    log.Fatal(err)
+}
 ```
 
-### Resource Management
+`AddMarkdownDirectory` reads every `.md` and `.markdown` file in the directory,
+adds them to the spine in file-name order, and builds a nested table of
+contents from the `h1` through `h6` headings found in each document.
 
-Manage and access publication resources:
+## Reading
+
+### Metadata
 
 ```go
-// Get all resources
-resources := r.Resources()
+book, _ := epub.OpenReader("book.epub")
 
-// Select specific resources
-resource := r.SelectResourceById("img001")
-resource := r.SelectResourceByHref("images/cover.jpg")
-
-// Extract images
-imageObj := r.ReadImageById("cover-image")
-imageObj := r.ReadImageByHref("images/cover.jpg")
-imageBytes := r.ReadImageBytesById("cover-image")
+book.Title()        // []string
+book.Author()       // []string
+book.Language()     // []string
+book.Identifier()   // []string
+book.UID()          // the resolved unique identifier
+book.Version()      // the EPUB version, e.g. "3.0"
+book.Description()  // []string
+book.Metadata()     // map[string]any of the full metadata block
+book.Refines()      // metadata refinements keyed by subject
 ```
 
-### Navigation Support
-
-Work with table of contents:
+### Content documents
 
 ```go
-// Get TOC
-toc := r.TOC()
-fmt.Println("Title:", toc.Title)
-fmt.Println("Href:", toc.Href)
+ids := book.ListContentDocumentIds() // manifest IDs of XHTML/SVG documents
 
-// Access nested items
+book.ReadContentHTMLById(id)       // *html.Node
+book.ReadContentHTMLByHref(href)   // *html.Node
+book.ReadContentMarkdownById(id)   // string (Markdown)
+book.ReadContentMarkdownByHref(h)  // string (Markdown)
+book.ContentDocumentXHTML()        // map[string]*html.Node
+book.ContentDocumentXHTMLString()  // map[string]string
+book.ContentDocumentMarkdown()     // map[string]string
+book.ContentDocumentSVG()          // map[string]*html.Node
+```
+
+### Resources and images
+
+```go
+book.Resources()                   // []PublicationResource
+book.SelectResourceById(id)        // *PublicationResource
+book.SelectResourceByHref(href)    // *PublicationResource
+
+book.ListImageIds()                // manifest IDs of image resources
+book.Images()                      // map[string]image.Image
+book.ImageResources()              // map[string][]byte
+book.ReadImageById(id)             // *image.Image
+book.ReadImageByHref(href)         // *image.Image
+book.ReadImageBytesById(id)        // []byte
+book.ReadImageBytesByHref(href)    // []byte
+```
+
+### Navigation
+
+```go
+toc, _ := book.TableOfContents()   // TOC (NAV or NCX)
+book.Landmarks()                   // []Landmark
+book.PageList()                    // []Landmark
+
 for _, item := range toc.Items {
-	fmt.Println("- ", item.Title, "->", item.Href)
+    fmt.Println(item.Title, item.Href)
 }
 
-// Serialize to JSON
-jsonBytes, _ := toc.JSON()
-
-// Select multiple renditions
-r.SelectPackageRendition("default")
-r.SelectPackageRendition("alternative")
-currentPackage := r.CurrentSelectedPackage()
+json, _ := toc.JSON()              // serialized table of contents
 ```
 
-### Image Handling
+### Multiple renditions
 
-Work with images in multiple formats:
-
-```go
-// Supported formats: JPEG, PNG, GIF, WebP, SVG
-
-// Get image as image.Image
-img := r.ReadImageById("image001")
-
-// Get raw bytes
-bytes := r.ReadImageBytesById("image001")
-
-// Get cover image
-cover := r.GetCover()
-
-// List image resources
-for _, resource := range r.Resources() {
-	if isImageType(resource.MIMEType) {
-		img := r.ReadImageByHref(resource.Href)
-		// Process image...
-	}
-}
-```
-
----
-
-## 📚 Reader API Overview
+Some publications ship more than one package document, for example a reflowable
+and a fixed-layout rendition of the same content.
 
 ```go
-type Reader
-
-// Constructor functions
-func NewReader(b []byte) (reader Reader, err error)
-func OpenReader(name string) (reader Reader, err error)
-
-// Metadata methods
-func (r *Reader) Title() []string
-func (r *Reader) Author() []string
-func (r *Reader) Identifier() []string
-func (r *Reader) Language() []string
-func (r *Reader) UID() string
-func (r *Reader) Version() string
-func (r *Reader) Metadata() map[string]any
-func (r *Reader) GetCover() *image.Image
-
-// Content access
-func (r *Reader) ReadContentHTMLById(id string) *html.Node
-func (r *Reader) ReadContentHTMLByHref(href string) *html.Node
-func (r *Reader) ReadContentMarkdownById(id string) string
-func (r *Reader) ReadContentMarkdownByHref(href string) string
-func (r *Reader) ReadContentById(id string) []byte
-func (r *Reader) ListContentDocumentIds() []string
-
-// Resource management
-func (r *Reader) Resources() []PublicationResource
-func (r *Reader) SelectResourceById(id string) *PublicationResource
-func (r *Reader) SelectResourceByHref(href string) *PublicationResource
-
-// Image handling
-func (r *Reader) ReadImageById(id string) *image.Image
-func (r *Reader) ReadImageByHref(href string) *image.Image
-func (r *Reader) ReadImageBytesById(id string) []byte
-func (r *Reader) ReadImageBytesByHref(href string) []byte
-
-// Navigation
-func (r *Reader) TOC() *TOC
-func (r *Reader) SelectPackageRendition(rendition string)
-func (r *Reader) CurrentSelectedPackage() *pkg.Package
-
-// Package selection
-func (r *Reader) SelectPackageRendition(rendition string)
-func (r *Reader) CurrentSelectedPackagePath() string
-```
-
----
-
-## 📐 Writer API Overview
-
-```go
-type Writer
-
-// Constructor
-func New(pubId string) *Writer
-
-// Metadata configuration
-func (w *Writer) Title(title string) *Writer
-func (w *Writer) Author(author ...string) *Writer
-func (w *Writer) Language(lang string) *Writer
-func (w *Writer) Description(desc ...string) *Writer
-func (w *Writer) Publisher(pub string) *Writer
-func (w *Writer) Date(date time.Time) *Writer
-
-// Content management
-func (w *Writer) AddContent(href string, content []byte) (id string, err error)
-func (w *Writer) AddImageContent(href string, imageData []byte) (id string, err error)
-func (w *Writer) AddCover(imagePath string) (id string, err error)
-
-// Output
-func (w *Writer) Write(filename string) error
-func (w *Writer) WriteBytes() ([]byte, error)
-
-// Advanced options
-func (w *Writer) SetTextDirection(direction string) *Writer
-func (w *Writer) SetContentDir(dir string) *Writer
-```
-
----
-
-## 💡 Advanced Usage
-
-### Working with Multiple Renditions
-
-Some EPUB files contain multiple renditions (different layouts, languages, etc.):
-
-```go
-r, _ := epub.OpenReader("book.epub")
-
-// Switch between available renditions
-r.SelectPackageRendition("default")
-r.SelectPackageRendition("alternative")
-
-// Get current package information
-pkg := r.CurrentSelectedPackage()
-fmt.Println("Manifest items:", len(pkg.Manifest.Items))
-```
-
-### Full Metadata Extraction
-
-```go
-metadata := r.Metadata()
-
-// The metadata map contains:
-// - Basic: title, author, language, identifier
-// - Extended: publisher, rights, description, contributor
-// - Meta: custom properties and relationships
-// - Links: external references
-
-for key, value := range metadata {
-	fmt.Printf("%s: %v\n", key, value)
-}
-```
-
-### Building EPUBs from Scratch
-
-```go
-w := epub.New("unique-pub-id")
-w.Title("Novel: The Rising Sun")
-w.Author("John Smith")
-w.Language("en")
-w.Publisher("Great Novels Inc")
-w.Rights("© 2024 John Smith. All rights reserved.")
-w.Description("An epic tale of adventure and discovery")
-
-// Add chapters
-chapters := []string{"chapter1.html", "chapter2.html", "chapter3.html"}
-for _, ch := range chapters {
-	content := readFile(ch)
-	w.AddContent(ch, content)
+for _, rendition := range book.ListRenditions() {
+    fmt.Println(rendition)
 }
 
-// Add cover image
-cover := readFile("cover.jpg")
-w.AddCover(cover)
-
-// Write final EPUB
-w.Write("novel.epub")
+book.SelectPackageRendition("pre-paginated")
+book.CurrentSelectedPackage()      // *pkg.Package
+book.CurrentSelectedPackagePath()  // path to the active package document
 ```
 
----
+## Writing
 
-## 📋 Supported Content Types
-
-### Media Types
-
-- **Documents**: `application/xhtml+xml` (XHTML)
-- **Navigation**: `application/x-dtbncx+xml` (NCX), `application/nav+xml` (HTML NAV)
-- **Styles**: `text/css` (CSS Stylesheets)
-- **Images**: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`
-- **Fonts**: `font/ttf`, `font/otf`, `application/font-woff`
-
-### Spine Directions
-
-- `ltr` - Left-to-Right (default)
-- `rtl` - Right-to-Left
-- `default` - Browser default
-
-### Properties
-
-- `nav` - Navigation document
-- `cover-image` - Cover image
-- `mathml` - MathML support
-- `svg` - SVG support
-- `scripted` - JavaScript support
-- `remote-resources` - External resources
-- `layout-pre-paginated` - Fixed layout
-
----
-
-## 📖 Examples
-
-### Example 1: Extract All Text from an EPUB
+### Metadata
 
 ```go
-package main
+w := epub.New("urn:isbn:9780000000001")
 
-import (
-	"fmt"
-	"log"
-	"strings"
-	"github.com/raitucarp/epub"
-)
-
-func main() {
-	r, err := epub.OpenReader("book.epub")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, id := range r.ListContentDocumentIds() {
-		html := r.ReadContentHTMLById(id)
-		fmt.Printf("Content for %s: %v\n", id, html)
-	}
-}
+w.Title("A Book")
+w.Title("A Book", "Subtitle")       // additional titles
+w.Author("Jane Doe")
+w.Creator("creator-id", "Jane Doe")
+w.Contributor("editor", "John Editor")
+w.Languages("en")
+w.Description("A short description")
+w.LongDescription("A longer description")
+w.Publisher("Example Press")
+w.Subject("subject-id", "Fiction")
+w.Rights("All rights reserved")
+w.Date(time.Now())
+w.Modified(time.Now())              // dcterms:modified
 ```
 
-### Example 2: Create an EPUB from Markdown Files
+### Content and resources
 
 ```go
-package main
-
-import (
-	"log"
-	"os"
-	"path/filepath"
-	"time"
-	"github.com/raitucarp/epub"
-)
-
-func main() {
-	w := epub.New("markdown-book-001")
-	w.Title("My Markdown Book")
-	w.Author("Author Name")
-	w.Language("en")
-	w.Date(time.Now())
-
-	// Convert markdown files to HTML and add to EPUB
-	files, _ := filepath.Glob("chapters/*.md")
-	for _, file := range files {
-		content, _ := os.ReadFile(file)
-		// In production, convert markdown to HTML
-		w.AddContent(filepath.Base(file), content)
-	}
-
-	w.Write("output.epub")
-}
+w.AddContent("chapter-1.xhtml", []byte("..."))   // XHTML or SVG
+w.AddContentFile("chapter-1.xhtml")              // read from disk
+w.AddImage("cover.png", imageBytes)
+w.AddImageFile("cover.png")
+w.Cover(imageBytes)                              // detect PNG/JPEG
+w.CoverPNG(img)                                  // image.Image as PNG
+w.CoverJPG(img)                                  // image.Image as JPEG
+w.CoverFile("cover.png")
 ```
 
-### Example 3: Copy and Modify an EPUB
+### Markdown
 
 ```go
-package main
-
-import (
-	"log"
-	"time"
-	"github.com/raitucarp/epub"
-)
-
-func main() {
-	// Read original
-	r, err := epub.OpenReader("original.epub")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create new EPUB with modified metadata
-	w := epub.New("new-pub-id")
-	w.Title(strings.Join(r.Title(), ", ") + " (Edition 2)")
-	w.Author(r.Author())
-	w.Language(r.Language())
-	w.Date(time.Now())
-
-	// Copy all content
-	for _, id := range r.ListContentDocumentIds() {
-		content := r.ReadContentById(id)
-		w.AddContent(id, content)
-	}
-
-	// Add new cover
-	cover := r.GetCover()
-	if cover != nil {
-		w.AddCover("new-cover.png")
-	}
-
-	w.Write("modified.epub")
-}
+w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nText.\n"))
+w.AddMarkdownFile("chapter-1.md")
+w.AddMarkdownDirectory("manuscript")
 ```
 
----
+### Table of contents
 
-## 🔧 Dependencies
+```go
+toc := epub.TOC{
+    Title: "Contents",
+    Items: []epub.TOC{
+        {Title: "Chapter 1", Href: "chapter-1.xhtml", Items: []epub.TOC{
+            {Title: "Section 1.1", Href: "chapter-1.xhtml#section-1-1"},
+        }},
+    },
+}
+w.TableOfContents("toc", toc)
+```
 
-- **html-to-markdown**: HTML to Markdown conversion
-- **golang.org/x/image**: Image processing (GIF, WebP support)
-- **golang.org/x/net/html**: HTML parsing
-- **golang.org/x/text**: Text normalization and Unicode handling
+### Writing to disk or memory
 
-All dependencies are vendored and documented in `go.mod`.
+```go
+w.Write("book.epub")        // write to a file
+data, err := w.WriteBytes() // write to an in-memory byte slice
+```
 
----
+## Supported media types
 
-## 🤝 Contributing
+- Documents: `application/xhtml+xml`, `text/html`
+- Navigation: `application/x-dtbncx+xml` (NCX), `application/xhtml+xml` (NAV)
+- Styles: `text/css`
+- Images: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`
+- Fonts: `font/ttf`, `font/otf`, `font/woff`, `font/woff2`
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Examples
 
-### Development Setup
+Runnable programs live under [`./examples`](./examples):
 
-```bash
+- [`read`](./examples/read) reads an EPUB file and prints its metadata and content.
+- [`write`](./examples/write) builds a minimal EPUB from XHTML.
+- [`markdown`](./examples/markdown) builds an EPUB from a directory of Markdown files.
+
+The package also includes [Godoc examples](https://pkg.go.dev/github.com/raitucarp/epub#pkg-examples)
+that progress from a basic write/read round-trip to a Markdown-driven build and
+a read-modify-write workflow.
+
+## Documentation
+
+The full API reference is available on
+[pkg.go.dev](https://pkg.go.dev/github.com/raitucarp/epub).
+
+## Contributing
+
+```sh
 git clone https://github.com/raitucarp/epub.git
 cd epub
 go mod download
 git config core.hooksPath .githooks
 go test ./...
 ```
- 
----
-
-## Writer API Overview
-
-```go
-type Writer
-
-func New(pubId string) *Writer
-
-func (w *Writer) Title(...string)
-func (w *Writer) Author(...string)
-func (w *Writer) Languages(...string)
-func (w *Writer) Date(time.Time)
-func (w *Writer) Description(...string)
-func (w *Writer) Publisher(...string)
-
-func (w *Writer) AddContent(filename string, content []byte) PublicationResource
-func (w *Writer) AddImage(name string, content []byte) PublicationResource
-func (w *Writer) AddSpineItem(res PublicationResource)
-
-func (w *Writer) Write(filename string) error
-````
-
----
 
 ## License
 
-See [LICENSE.md](LICENSE)
+[MIT](./LICENSE.md)

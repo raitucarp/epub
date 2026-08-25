@@ -36,6 +36,7 @@ var metaInfReservedFiles = []metaInfReservedFile{
 
 var requiredMetaInfFiles = []metaInfReservedFile{containerFile}
 
+// MetaInf holds the parsed contents of the reserved META-INF files.
 type MetaInf struct {
 	container  Container
 	signatures Signatures

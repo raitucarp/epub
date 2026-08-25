@@ -48,6 +48,8 @@ const (
 	LinearNo  = "no"
 )
 
+// ImageMediaTypes lists the media types that identify image resources in the
+// package manifest.
 var ImageMediaTypes = []string{
 	MediaTypeSVG,
 	MediaTypeJPEG,

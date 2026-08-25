@@ -4,6 +4,8 @@ import (
 	"encoding/xml"
 )
 
+// NCX is the root element of an NCX navigation document, used for EPUB 2
+// table-of-contents and page-list navigation.
 type NCX struct {
 	XMLName   xml.Name    `xml:"http://www.daisy.org/z3986/2005/ncx/ ncx"`
 	Version   string      `xml:"version,attr"`
@@ -16,6 +18,7 @@ type NCX struct {
 	NavLists  []NavList   `xml:"navList,omitempty"`
 }
 
+// Parse unmarshals an NCX document from its raw XML bytes.
 func Parse(data []byte) (ncx *NCX, err error) {
 	err = xml.Unmarshal(data, &ncx)
 	return

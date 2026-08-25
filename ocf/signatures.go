@@ -2,6 +2,8 @@ package ocf
 
 import "encoding/xml"
 
+// Signatures is the root element of the signatures.xml document, which holds
+// the digital signatures for the publication's resources.
 type Signatures struct {
 	XMLName   xml.Name    `xml:"urn:oasis:names:tc:opendocument:xmlns:container signatures"`
 	XMLNS     string      `xml:"xmlns,attr,omitempty"`

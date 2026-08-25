@@ -2,6 +2,8 @@ package ocf
 
 import "encoding/xml"
 
+// Container is the root element of the container.xml document, which lists the
+// package documents that make up the publication.
 type Container struct {
 	XMLName   xml.Name  `xml:"urn:oasis:names:tc:opendocument:xmlns:container container"`
 	Version   string    `xml:"version,attr"`

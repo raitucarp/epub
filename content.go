@@ -413,7 +413,8 @@ func (r *Reader) ImageResources() (images map[string][]byte) {
 	return
 }
 
-// Spine returns publication's spines, ordered resources like table of contents.
+// Spine returns the publication's spine, an ordered list of resources that
+// defines the default reading order.
 func (r *Reader) Spine() (orderedResources []PublicationResource) {
 	spineItems := r.CurrentSelectedPackage().Spine.ItemRefs
 	orderedResources = make([]PublicationResource, 0, len(spineItems))
