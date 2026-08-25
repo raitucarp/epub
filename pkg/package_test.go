@@ -160,3 +160,57 @@ func TestPackage_XmlLangRoundTrip(t *testing.T) {
 		t.Errorf("output must not contain a mangled xml prefix, got %s", s)
 	}
 }
+
+func TestGuideReferenceType_MarshalText(t *testing.T) {
+	values := []GuideReferenceType{
+		GuideRefCover, GuideRefTitlePage, GuideRefToc, GuideRefIndex,
+		GuideRefGlossary, GuideRefAcknowledgements, GuideRefBibliography,
+		GuideRefColophon, GuideRefCopyrightPage, GuideRefDedication,
+		GuideRefEpigraph, GuideRefForeword, GuideRefLoi, GuideRefLot,
+		GuideRefNotes, GuideRefPreface, GuideRefText,
+	}
+
+	for _, v := range values {
+		t.Run(string(v), func(t *testing.T) {
+			out, err := v.MarshalText()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if string(out) != string(v) {
+				t.Errorf("expected %q, got %q", string(v), string(out))
+			}
+		})
+	}
+}
+
+func TestGuideReferenceType_UnmarshalText(t *testing.T) {
+	known := []GuideReferenceType{
+		GuideRefCover, GuideRefTitlePage, GuideRefToc, GuideRefIndex,
+		GuideRefGlossary, GuideRefAcknowledgements, GuideRefBibliography,
+		GuideRefColophon, GuideRefCopyrightPage, GuideRefDedication,
+		GuideRefEpigraph, GuideRefForeword, GuideRefLoi, GuideRefLot,
+		GuideRefNotes, GuideRefPreface, GuideRefText,
+	}
+
+	for _, v := range known {
+		t.Run(string(v), func(t *testing.T) {
+			var got GuideReferenceType
+			if err := got.UnmarshalText([]byte(v)); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != v {
+				t.Errorf("expected %q, got %q", v, got)
+			}
+		})
+	}
+
+	t.Run("unknown value preserved", func(t *testing.T) {
+		var got GuideReferenceType
+		if err := got.UnmarshalText([]byte("custom-type")); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != GuideReferenceType("custom-type") {
+			t.Errorf("expected custom-type to be preserved, got %q", got)
+		}
+	})
+}
