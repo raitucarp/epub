@@ -99,11 +99,11 @@ func (w *Writer) Title(title ...string) {
 		pkg.DCTitle{ID: "title", Value: title[0]},
 	)
 
-	for _, title := range title[1:] {
-		w.epub.SelectedPackage().Metadata.Meta = append(w.epub.SelectedPackage().Metadata.Meta, pkg.Meta{
-			Refines: "#title",
-			Value:   title,
-		})
+	for _, alt := range title[1:] {
+		w.epub.SelectedPackage().Metadata.Titles = append(
+			w.epub.SelectedPackage().Metadata.Titles,
+			pkg.DCTitle{Value: alt},
+		)
 	}
 }
 
@@ -491,6 +491,8 @@ func (w *Writer) addResource(
 	mimeType string,
 	content []byte,
 ) (pubRes PublicationResource) {
+	id = w.uniqueID(id)
+
 	pubRes = PublicationResource{
 		ID:         id,
 		Filepath:   filePath,
@@ -515,6 +517,37 @@ func (w *Writer) addResource(
 	return pubRes
 }
 
+// uniqueID returns an identifier that is unique within the manifest, appending
+// a numeric suffix when the requested identifier is already in use. EPUB
+// manifest item ids must be unique.
+func (w *Writer) uniqueID(id string) string {
+	used := false
+	for _, item := range w.epub.SelectedPackage().Manifest.Items {
+		if item.ID == id {
+			used = true
+			break
+		}
+	}
+	if !used {
+		return id
+	}
+
+	base := id
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		taken := false
+		for _, item := range w.epub.SelectedPackage().Manifest.Items {
+			if item.ID == candidate {
+				taken = true
+				break
+			}
+		}
+		if !taken {
+			return candidate
+		}
+	}
+}
+
 // AddSpineItem appends the given resource to the spine reading order.
 func (w *Writer) AddSpineItem(res PublicationResource) {
 	itemRef := pkg.ItemRef{IDRef: res.ID}
@@ -524,49 +557,48 @@ func (w *Writer) AddSpineItem(res PublicationResource) {
 	)
 }
 
+// uniqueResourceName returns a name whose derived nav (name.xhtml) and NCX
+// (name.ncx) hrefs do not collide with any existing manifest item href. This
+// prevents TableOfContents from silently overwriting a content document that
+// happens to share the generated navigation document's file name.
+func (w *Writer) uniqueResourceName(name string) string {
+	collides := func(n string) bool {
+		for _, item := range w.epub.SelectedPackage().Manifest.Items {
+			if item.Href == n+".xhtml" || item.Href == n+".ncx" {
+				return true
+			}
+		}
+		return false
+	}
+	if !collides(name) {
+		return name
+	}
+	base := name
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if !collides(candidate) {
+			return candidate
+		}
+	}
+}
+
 func (w *Writer) TableOfContents(name string, toc TOC) (err error) {
+	name = w.uniqueResourceName(name)
+
 	navigation := ncx.NCX{
 		NavMap: ncx.NavMap{
 			ID:        "navmap",
 			NavPoints: []ncx.NavPoint{},
 		},
 	}
-	currentNavPoint := 0
-	visitTOC(&toc, func(t *TOC, depth int) {
-		if t.Href == "" && depth == 0 {
-			navigation.DocTitle.Text = t.Title
-			return
-		}
-
-		label := ncx.NavLabel{Text: t.Title}
-		playOrder := strconv.Itoa(currentNavPoint + 1)
-		navPoint := ncx.NavPoint{
-			ID:        "nav-point-" + playOrder,
-			PlayOrder: playOrder,
-			NavLabel:  label,
-			Content:   ncx.Content{Src: t.Href},
-			NavPoints: []ncx.NavPoint{},
-		}
-
-		if depth <= 1 {
-			navigation.NavMap.NavPoints = append(navigation.NavMap.NavPoints, navPoint)
-		} else {
-			navigation.NavMap.NavPoints[depth+1].NavPoints = append(
-				navigation.NavMap.NavPoints[depth+1].NavPoints,
-				navPoint,
-			)
-		}
-
-		currentNavPoint++
-
-	})
+	navigation.DocTitle.Text = toc.Title
+	navigation.NavMap.NavPoints = buildNavPoints(toc.Items, 0)
 
 	w.epub.navigationCenterEXtended = &navigation
-	w.epub.SelectedPackage().Spine.TOC = name
 	ncxContent, err := xml.MarshalIndent(navigation, "", " ")
 	ncxBase := name + ".ncx"
 	ncxFilePath := path.Join(w.contentDir, ncxBase)
-	w.addResource(
+	ncxRes := w.addResource(
 		name,
 		ncxFilePath,
 		ncxBase,
@@ -574,6 +606,7 @@ func (w *Writer) TableOfContents(name string, toc TOC) (err error) {
 		pkg.MediaTypeNCX,
 		ncxContent,
 	)
+	w.epub.SelectedPackage().Spine.TOC = ncxRes.ID
 
 	filePath := path.Join(w.contentDir, name+".xhtml")
 	base := filepath.Base(filePath)
@@ -600,6 +633,33 @@ func (w *Writer) TableOfContents(name string, toc TOC) (err error) {
 	return
 }
 
+// buildNavPoints recursively converts TOC items into NCX navPoints, assigning
+// sequential playOrder and id values in document order.
+func buildNavPoints(items []TOC, playOrder int) []ncx.NavPoint {
+	counter := playOrder
+	var build func([]TOC) []ncx.NavPoint
+	build = func(list []TOC) []ncx.NavPoint {
+		var points []ncx.NavPoint
+		for _, item := range list {
+			counter++
+			order := strconv.Itoa(counter)
+			point := ncx.NavPoint{
+				ID:        "nav-point-" + order,
+				PlayOrder: order,
+				NavLabel:  ncx.NavLabel{Text: item.Title},
+				Content:   ncx.Content{Src: item.Href},
+				NavPoints: []ncx.NavPoint{},
+			}
+			if len(item.Items) > 0 {
+				point.NavPoints = build(item.Items)
+			}
+			points = append(points, point)
+		}
+		return points
+	}
+	return build(items)
+}
+
 func (w *Writer) guardCheck() (err error) {
 	for _, p := range w.epub.packagePubs {
 
@@ -619,23 +679,14 @@ func (w *Writer) guardCheck() (err error) {
 			return errors.New("No content insides.")
 		} else {
 			var content int
-			var cover int
 			for _, item := range p.Manifest.Items {
-				if item.MediaType == pkg.MediaTypeXHTML {
+				if isXHTMLContent(item.MediaType) {
 					content++
-				}
-
-				if item.Properties == pkg.CoverImageProperty {
-					cover++
 				}
 			}
 
 			if content <= 0 {
 				return errors.New("No text content insides.")
-			}
-
-			if cover <= 0 {
-				return errors.New("No cover images.")
 			}
 		}
 
