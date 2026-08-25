@@ -10,7 +10,7 @@ type Package struct {
 	Dir              string       `xml:"dir,attr,omitempty"`
 	ID               string       `xml:"id,attr,omitempty"`
 	Prefix           string       `xml:"prefix,attr,omitempty"`
-	Lang             string       `xml:"xml lang,attr,omitempty"`
+	Lang             string       `xml:"http://www.w3.org/XML/1998/namespace lang,attr,omitempty"`
 	UniqueIdentifier string       `xml:"unique-identifier,attr"`
 	Version          string       `xml:"version,attr"`
 	Metadata         Metadata     `xml:"metadata"`
@@ -45,7 +45,7 @@ type DCTitle struct {
 	XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ title"`
 	Dir     string   `xml:"dir,attr,omitempty"`
 	ID      string   `xml:"id,attr,omitempty"`
-	Lang    string   `xml:"xml lang,attr,omitempty"`
+	Lang    string   `xml:"http://www.w3.org/XML/1998/namespace lang,attr,omitempty"`
 	Value   string   `xml:",chardata"`
 }
 
@@ -61,7 +61,7 @@ type DCOptional struct {
 	XMLName xml.Name
 	Dir     string `xml:"dir,attr,omitempty"`
 	ID      string `xml:"id,attr,omitempty"`
-	Lang    string `xml:"xml lang,attr,omitempty"`
+	Lang    string `xml:"http://www.w3.org/XML/1998/namespace lang,attr,omitempty"`
 	Value   string `xml:",chardata"`
 }
 
@@ -75,7 +75,7 @@ type Meta struct {
 	Property string   `xml:"property,attr,omitempty"`
 	Refines  string   `xml:"refines,attr,omitempty"`
 	Scheme   string   `xml:"scheme,attr,omitempty"`
-	Lang     string   `xml:"xml lang,attr,omitempty"`
+	Lang     string   `xml:"http://www.w3.org/XML/1998/namespace lang,attr,omitempty"`
 	Value    string   `xml:",chardata"`
 }
 
@@ -244,7 +244,7 @@ type Collection struct {
 	Dir         string              `xml:"dir,attr,omitempty"`
 	ID          string              `xml:"id,attr,omitempty"`
 	Role        string              `xml:"role,attr"`
-	Lang        string              `xml:"xml lang,attr,omitempty"`
+	Lang        string              `xml:"http://www.w3.org/XML/1998/namespace lang,attr,omitempty"`
 	Metadata    *CollectionMetadata `xml:"http://www.idpf.org/2007/opf metadata,omitempty"`
 	Collections []Collection        `xml:"http://www.idpf.org/2007/opf collection,omitempty"`
 	Links       []Link              `xml:"http://www.idpf.org/2007/opf link,omitempty"`

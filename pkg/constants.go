@@ -11,6 +11,9 @@ const (
 	// NamespaceOPS is the namespace of the EPUB content and reserved
 	// prefixes (epub:type and friends).
 	NamespaceOPS = "http://www.idpf.org/2007/ops"
+	// NamespaceXML is the reserved XML namespace used by xml:lang and other
+	// xml:* attributes.
+	NamespaceXML = "http://www.w3.org/XML/1998/namespace"
 )
 
 // Constants for common property values
@@ -26,6 +29,7 @@ const (
 
 	// Media types
 	MediaTypeXHTML = "application/xhtml+xml"
+	MediaTypeHTML  = "text/html"
 	MediaTypeSVG   = "image/svg+xml"
 	MediaTypeJPEG  = "image/jpeg"
 	MediaTypeGIF   = "image/gif"

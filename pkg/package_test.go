@@ -136,3 +136,27 @@ func TestCollection_Unmarshal(t *testing.T) {
 		t.Errorf("expected link, got %+v", c.Links)
 	}
 }
+
+func TestPackage_XmlLangRoundTrip(t *testing.T) {
+	fixture := `<package xmlns="http://www.idpf.org/2007/opf" version="3.0" xml:lang="en" unique-identifier="pub-id"></package>`
+
+	var p Package
+	if err := xml.Unmarshal([]byte(fixture), &p); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.Lang != "en" {
+		t.Errorf("expected xml:lang to be parsed as 'en', got %q", p.Lang)
+	}
+
+	out, err := xml.Marshal(p)
+	if err != nil {
+		t.Fatalf("unexpected marshal error: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, `xml:lang="en"`) {
+		t.Errorf("expected xml:lang attribute in output, got %s", s)
+	}
+	if strings.Contains(s, "_xml") {
+		t.Errorf("output must not contain a mangled xml prefix, got %s", s)
+	}
+}
