@@ -3,9 +3,13 @@ package ocf
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/xml"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/raitucarp/epub/pkg"
 )
 
 func TestOCFZipContainer_AddMimeType(t *testing.T) {
@@ -82,5 +86,60 @@ func TestOCFZipContainer_WriteIsReadable(t *testing.T) {
 
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("Expected written file to exist, got %v", err)
+	}
+}
+
+func TestOCFZipContainer_AddPackage(t *testing.T) {
+	container := NewOCFZipContainer()
+
+	p := pkg.Package{
+		Version:          "3.0",
+		UniqueIdentifier: "pub-id",
+	}
+	p.Metadata.Identifiers = append(p.Metadata.Identifiers, pkg.DCIdentifier{ID: "pub-id", Value: "urn:test"})
+
+	if err := container.AddPackage("EPUB/package.opf", p); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, ok := container.files["EPUB/package.opf"]
+	if !ok {
+		t.Fatal("expected package file to be added")
+	}
+	if !strings.HasPrefix(string(content), xml.Header) {
+		t.Errorf("expected package content to start with xml header, got %q", string(content[:min(len(content), 40)]))
+	}
+	if !strings.Contains(string(content), "urn:test") {
+		t.Errorf("expected package to contain identifier, got %q", string(content))
+	}
+}
+
+func TestOCFZipContainer_AddContainerXML(t *testing.T) {
+	container := NewOCFZipContainer()
+
+	if err := container.AddContainerXML("EPUB/package.opf", "EPUB/pre.opf"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, ok := container.files["META-INF/container.xml"]
+	if !ok {
+		t.Fatal("expected container.xml to be added")
+	}
+	s := string(content)
+	if !strings.Contains(s, "EPUB/package.opf") || !strings.Contains(s, "EPUB/pre.opf") {
+		t.Errorf("expected both rootfiles in container.xml, got %q", s)
+	}
+	if !strings.Contains(s, EPUBContainerMime) {
+		t.Errorf("expected media type in container.xml, got %q", s)
+	}
+}
+
+func TestOCFZipContainer_Write_InvalidPath(t *testing.T) {
+	container := NewOCFZipContainer()
+	container.AddMimeType()
+
+	path := filepath.Join(t.TempDir(), "missing-dir", "out.epub")
+	if err := container.Write(path); err == nil {
+		t.Error("expected error writing to non-existent directory, got nil")
 	}
 }
