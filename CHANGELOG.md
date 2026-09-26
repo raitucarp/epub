@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0]
+
+### Features
+
+- implement in-place EPUB editing with `reader.Edit()` and fluent `Editor` API
+- support bidirectional mode switching with `editor.Reader()`
+- support multiple persistence options: `SaveAs(path)`, `Save(io.Writer)`, and `WriteBytes(*[]byte)`
+- add OCF container file removal and cloning capabilities
+
+### Testing
+
+- add unit tests and runnable Go doc examples for Editor
+- add cross-platform GitHub Actions CI workflow (Linux, macOS, Windows across Go 1.25.x & 1.26.x)
+
+### Documentation & Examples
+
+- add Hugo documentation website with web book reader showcase
+- expand comprehensive example suites for read, edit, and write (basic, cover, multi-chapter, markdown, RTL, and Standard Ebooks reconstruction)
+- update README with CI status, GoDoc, and Ko-fi sponsorship badges
+
 ## [0.4.0]
 
 ### Features
