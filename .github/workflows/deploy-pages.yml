@@ -3,6 +3,7 @@ name: Deploy Hugo Docs to GitHub Pages
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
     paths:
       - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
@@ -35,8 +36,10 @@ jobs:
 
       - name: Build Hugo Site
         run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.5.0")
+          echo "Building docs for version: $LATEST_TAG"
           cd docs
-          hugo --minify
+          HUGO_PARAMS_VERSION="$LATEST_TAG" hugo --minify
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3

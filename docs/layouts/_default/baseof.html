@@ -13,7 +13,7 @@
     <div class="header-container">
       <a href="{{ .Site.BaseURL }}" class="brand-title">
         <span>📖 epub</span>
-        <span class="brand-badge">v0.1.0</span>
+        <span class="brand-badge">{{ .Site.Params.version }}</span>
       </a>
       <nav class="main-nav">
         {{ range .Site.Menus.main }}
