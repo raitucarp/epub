@@ -481,3 +481,138 @@ func TestReader_References_NoGuide(t *testing.T) {
 		t.Errorf("expected empty references, got %v", refs)
 	}
 }
+
+func TestReader_Author_Fallbacks(t *testing.T) {
+	// Fallback 1: Guide with titlepage
+	r1 := &Reader{epub: &Epub{
+		metadata:  map[string]any{},
+		rendition: "default",
+		packagePubs: map[string]*pkg.Package{
+			"default": {
+				Guide: &pkg.Guide{
+					References: []pkg.GuideReference{
+						{Type: pkg.GuideRefTitlePage, Href: "titlepage.xhtml"},
+					},
+				},
+			},
+		},
+		resources: []PublicationResource{
+			{
+				ID:       "tp",
+				Href:     "titlepage.xhtml",
+				Content:  []byte(`<html xmlns:epub="http://www.idpf.org/2007/ops"><body><div epub:type="author">Guide Author</div></body></html>`),
+				MIMEType: pkg.MediaTypeXHTML,
+			},
+		},
+	}}
+	if authors := r1.Author(); len(authors) != 1 || authors[0] != "Guide Author" {
+		t.Errorf("expected 'Guide Author', got %v", authors)
+	}
+
+	// Fallback 2: Resource ID matching title
+	r2 := &Reader{epub: &Epub{
+		metadata:  map[string]any{},
+		rendition: "default",
+		packagePubs: map[string]*pkg.Package{
+			"default": {},
+		},
+		resources: []PublicationResource{
+			{
+				ID:       "title-page",
+				Href:     "tp.xhtml",
+				Content:  []byte(`<html xmlns:epub="http://www.idpf.org/2007/ops"><body><div epub:type="author">Pattern Author</div></body></html>`),
+				MIMEType: pkg.MediaTypeXHTML,
+			},
+		},
+	}}
+	if authors := r2.Author(); len(authors) != 1 || authors[0] != "Pattern Author" {
+		t.Errorf("expected 'Pattern Author', got %v", authors)
+	}
+
+	// Fallback 3: Unknown
+	r3 := &Reader{epub: &Epub{
+		metadata:  map[string]any{},
+		rendition: "default",
+		packagePubs: map[string]*pkg.Package{
+			"default": {},
+		},
+	}}
+	if authors := r3.Author(); len(authors) != 1 || authors[0] != "Unknown" {
+		t.Errorf("expected 'Unknown', got %v", authors)
+	}
+}
+
+func TestReader_CoverBytes_NoCover(t *testing.T) {
+	r := &Reader{epub: &Epub{
+		metadata:    map[string]any{},
+		rendition:   "default",
+		packagePubs: map[string]*pkg.Package{"default": {}},
+	}}
+	if _, err := r.CoverBytes(); err == nil {
+		t.Error("expected error from CoverBytes() when no cover exists")
+	}
+}
+
+func TestReader_CoverFromTOC(t *testing.T) {
+	pngData := testPNGBytes(t, 10, 10)
+	r := &Reader{epub: &Epub{
+		metadata:  map[string]any{},
+		rendition: "default",
+		packagePubs: map[string]*pkg.Package{
+			"default": {},
+		},
+		resources: []PublicationResource{
+			{
+				ID:       "toc",
+				Href:     "toc.xhtml",
+				Content:  []byte(`<html xmlns:epub="http://www.idpf.org/2007/ops"><nav epub:type="toc"><ol><li><a href="cover-page.xhtml">Cover</a></li></ol></nav></html>`),
+				MIMEType: pkg.MediaTypeXHTML,
+				Properties: pkg.NavProperty,
+			},
+			{
+				ID:       "cover-page",
+				Href:     "cover-page.xhtml",
+				Content:  []byte(`<html><body><img src="cover-art.png"/></body></html>`),
+				MIMEType: pkg.MediaTypeXHTML,
+			},
+			{
+				ID:       "cover-art",
+				Href:     "cover-art.png",
+				Content:  pngData,
+				MIMEType: pkg.MediaTypePNG,
+			},
+		},
+	}}
+
+	cov := r.Cover()
+	if cov == nil {
+		t.Error("expected cover to be found from TOC")
+	}
+
+	bytes, err := r.CoverBytes()
+	if err != nil {
+		t.Fatalf("expected CoverBytes to succeed: %v", err)
+	}
+	if len(bytes) == 0 {
+		t.Error("expected non-empty cover bytes")
+	}
+}
+
+func TestExtractDescriptionFromSummaryMeta(t *testing.T) {
+	meta := map[string]any{
+		"meta": map[string]any{
+			"summary": []any{"This is a summary."},
+		},
+	}
+	res := extractDescriptionFromSummaryMeta(meta)
+	if len(res) != 1 || res[0] != "This is a summary." {
+		t.Errorf("unexpected summary result: %v", res)
+	}
+
+	if res := extractDescriptionFromSummaryMeta(nil); res != nil {
+		t.Errorf("expected nil for nil metadata, got %v", res)
+	}
+	if res := extractDescriptionFromSummaryMeta(map[string]any{"meta": "not-a-map"}); res != nil {
+		t.Errorf("expected nil for non-map meta, got %v", res)
+	}
+}

@@ -606,12 +606,18 @@ func (e *Editor) uniqueID(id string) string {
 
 // AddFile directly adds or updates any arbitrary file path inside the container.
 func (e *Editor) AddFile(filePath string, content []byte) *Editor {
+	if e.zipContainer == nil {
+		return e
+	}
 	e.zipContainer.AddFile(filePath, content)
 	return e
 }
 
 // AddResource adds a resource to the publication manifest and container.
 func (e *Editor) AddResource(id, href, mimeType string, properties pkg.ManifestProperty, content []byte) (PublicationResource, error) {
+	if e.zipContainer == nil {
+		return PublicationResource{}, errors.New("epub: zip container is nil")
+	}
 	p := e.CurrentPackage()
 	if p == nil {
 		return PublicationResource{}, errors.New("no active package selected")
@@ -843,9 +849,10 @@ func (e *Editor) Resources() []PublicationResource {
 
 // SelectResourceById retrieves a publication resource by its manifest ID.
 func (e *Editor) SelectResourceById(id string) *PublicationResource {
-	for _, res := range e.Resources() {
-		if res.ID == id {
-			return &res
+	all := e.Resources()
+	for i := range all {
+		if all[i].ID == id {
+			return &all[i]
 		}
 	}
 	return nil
@@ -853,9 +860,10 @@ func (e *Editor) SelectResourceById(id string) *PublicationResource {
 
 // SelectResourceByHref retrieves a publication resource by its manifest Href.
 func (e *Editor) SelectResourceByHref(href string) *PublicationResource {
-	for _, res := range e.Resources() {
-		if res.Href == href {
-			return &res
+	all := e.Resources()
+	for i := range all {
+		if all[i].Href == href {
+			return &all[i]
 		}
 	}
 	return nil

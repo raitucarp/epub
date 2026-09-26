@@ -218,3 +218,56 @@ func TestReplaceExt(t *testing.T) {
 		t.Errorf("expected chapter.xhtml, got %q", got)
 	}
 }
+
+func TestHeadingLevel(t *testing.T) {
+	tests := []struct {
+		tag  string
+		lvl  int
+		want bool
+	}{
+		{"h1", 1, true},
+		{"h2", 2, true},
+		{"h3", 3, true},
+		{"h4", 4, true},
+		{"h5", 5, true},
+		{"h6", 6, true},
+		{"h7", 0, false},
+		{"p", 0, false},
+		{"div", 0, false},
+		{"header", 0, false},
+	}
+	for _, tt := range tests {
+		lvl, ok := headingLevel(tt.tag)
+		if ok != tt.want || lvl != tt.lvl {
+			t.Errorf("headingLevel(%q) = (%d, %v), want (%d, %v)", tt.tag, lvl, ok, tt.lvl, tt.want)
+		}
+	}
+}
+
+func TestWriter_AddMarkdownFile_Errors(t *testing.T) {
+	w := New("urn:md:err")
+	// Non-local path
+	if _, err := w.AddMarkdownFile("../outside.md"); err == nil {
+		t.Error("expected error for non-local path in AddMarkdownFile")
+	}
+}
+
+func TestMarkdownToXHTML_DuplicateHeadings(t *testing.T) {
+	src := []byte("# Same Heading\n\nText\n\n# Same Heading\n\nMore text\n\n# Same Heading\n")
+	res, err := markdownToXHTML(src)
+	if err != nil {
+		t.Fatalf("markdownToXHTML: %v", err)
+	}
+	if len(res.headings) != 3 {
+		t.Fatalf("expected 3 headings, got %d", len(res.headings))
+	}
+	if res.headings[0].id != "same-heading" {
+		t.Errorf("expected same-heading, got %s", res.headings[0].id)
+	}
+	if res.headings[1].id != "same-heading-2" {
+		t.Errorf("expected same-heading-2, got %s", res.headings[1].id)
+	}
+	if res.headings[2].id != "same-heading-3" {
+		t.Errorf("expected same-heading-3, got %s", res.headings[2].id)
+	}
+}

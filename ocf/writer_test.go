@@ -143,3 +143,29 @@ func TestOCFZipContainer_Write_InvalidPath(t *testing.T) {
 		t.Error("expected error writing to non-existent directory, got nil")
 	}
 }
+
+func TestOCFZipContainer_RemoveFile_And_Clone(t *testing.T) {
+	c := NewOCFZipContainer()
+	c.AddFile("test.txt", []byte("hello"))
+	if len(c.files) != 1 {
+		t.Fatalf("expected 1 file")
+	}
+
+	cloned := c.Clone()
+	if cloned == nil || len(cloned.files) != 1 {
+		t.Fatalf("expected cloned container with 1 file")
+	}
+
+	c.RemoveFile("test.txt")
+	if len(c.files) != 0 {
+		t.Fatalf("expected 0 files after RemoveFile")
+	}
+	if len(cloned.files) != 1 {
+		t.Fatalf("expected cloned container to remain untouched")
+	}
+
+	var nilContainer *OCFZipContainer
+	if nilContainer.Clone() != nil {
+		t.Error("expected nil clone for nil container")
+	}
+}

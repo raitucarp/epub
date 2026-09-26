@@ -2,10 +2,15 @@ package epub
 
 import (
 	"bytes"
+	"image"
+	"image/color"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/raitucarp/epub/pkg"
 )
 
 func createSampleEpub(t *testing.T) []byte {
@@ -455,6 +460,234 @@ func TestEditor_Reader(t *testing.T) {
 	}
 	if titles := finalReader.Title(); len(titles) != 1 || titles[0] != "Second Edit" {
 		t.Errorf("unexpected titles: %v", titles)
+	}
+}
+
+func TestEditor_MetadataMethods(t *testing.T) {
+	sampleBytes := createSampleEpub(t)
+	r, err := NewReader(sampleBytes)
+	if err != nil {
+		t.Fatalf("NewReader: %v", err)
+	}
+
+	ed, err := r.Edit()
+	if err != nil {
+		t.Fatalf("Edit(): %v", err)
+	}
+
+	ed.AddTitle("Secondary Title").
+		AddAuthor("Second Author").
+		Creator("illustrator", "Art Person").
+		AddDescription("Additional descriptive details").
+		AddPublisher("Second Publishing House").
+		Contributor("editor", "Chief Editor").
+		AddSubject("Science").
+		AddLanguage("fr").
+		AddIdentifier("isbn", "978-3-16-148410-0").
+		DublinCore("source", "https://example.com/source").
+		SetMeta("generator", "custom-generator").
+		Meta(pkg.Meta{Name: "custom_meta", Content: "val"}).
+		MetaContent(map[string]string{"foo": "bar"}).
+		MetaProperty("prop-1", "custom-property", "prop-val").
+		Refines("prop-1", "scheme", "custom-scheme").
+		Modified(time.Now())
+
+	// Verify DublinCore was added
+	foundSource := false
+	for _, dc := range ed.CurrentPackage().Metadata.OptionalDC {
+		if dc.ID == "source" || dc.XMLName.Local == "source" {
+			foundSource = true
+			break
+		}
+	}
+	if !foundSource {
+		t.Error("expected source DublinCore metadata")
+	}
+
+	// Remove meta
+	ed.RemoveMeta("custom_meta")
+	ed.RemoveMetadata("source")
+
+	b, err := ed.SaveBytes()
+	if err != nil {
+		t.Fatalf("SaveBytes(): %v", err)
+	}
+
+	r2, err := NewReader(b)
+	if err != nil {
+		t.Fatalf("NewReader r2: %v", err)
+	}
+
+	if len(r2.Title()) < 2 {
+		t.Errorf("expected at least 2 titles, got %d", len(r2.Title()))
+	}
+	if len(r2.Author()) < 2 {
+		t.Errorf("expected at least 2 authors, got %d", len(r2.Author()))
+	}
+}
+
+func TestEditor_FilesAndAssets(t *testing.T) {
+	sampleBytes := createSampleEpub(t)
+	r, err := NewReader(sampleBytes)
+	if err != nil {
+		t.Fatalf("NewReader: %v", err)
+	}
+
+	ed, err := r.Edit()
+	if err != nil {
+		t.Fatalf("Edit(): %v", err)
+	}
+
+	// AddFile raw
+	ed.AddFile("misc/data.txt", []byte("arbitrary text data"))
+
+	// AddContentFile from disk
+	tempDir := t.TempDir()
+	contentFilePath := filepath.Join(tempDir, "ch2.xhtml")
+	if err := os.WriteFile(contentFilePath, []byte("<html><body><h1>Ch2</h1></body></html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resContent, err := ed.AddContentFile(contentFilePath)
+	if err != nil {
+		t.Fatalf("AddContentFile: %v", err)
+	}
+	if resContent.Href != "ch2.xhtml" {
+		t.Errorf("expected href ch2.xhtml, got %q", resContent.Href)
+	}
+
+	// AddMarkdownFile from disk
+	mdFilePath := filepath.Join(tempDir, "ch3.md")
+	if err := os.WriteFile(mdFilePath, []byte("# Chapter 3\n\nMarkdown text."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resMD, err := ed.AddMarkdownFile(mdFilePath)
+	if err != nil {
+		t.Fatalf("AddMarkdownFile: %v", err)
+	}
+	if resMD.Href != "ch3.xhtml" {
+		t.Errorf("expected href ch3.xhtml, got %q", resMD.Href)
+	}
+
+	// AddImageFile from disk
+	img := image.NewRGBA(image.Rect(0, 0, 5, 5))
+	for x := 0; x < 5; x++ {
+		for y := 0; y < 5; y++ {
+			img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 255})
+		}
+	}
+	pngPath := filepath.Join(tempDir, "img.png")
+	if err := os.WriteFile(pngPath, testPNGBytes(t, 5, 5), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resImg, err := ed.AddImageFile(pngPath)
+	if err != nil {
+		t.Fatalf("AddImageFile: %v", err)
+	}
+	if resImg.Href != "img.png" {
+		t.Errorf("expected href img.png, got %q", resImg.Href)
+	}
+
+	// CoverPNG, CoverJPG, CoverFile
+	if err := ed.CoverPNG(img); err != nil {
+		t.Fatalf("CoverPNG: %v", err)
+	}
+	if err := ed.CoverJPG(img); err != nil {
+		t.Fatalf("CoverJPG: %v", err)
+	}
+	if err := ed.CoverFile(pngPath); err != nil {
+		t.Fatalf("CoverFile: %v", err)
+	}
+
+	// Resources inspection
+	allRes := ed.Resources()
+	if len(allRes) == 0 {
+		t.Error("expected non-empty Resources()")
+	}
+	if ed.SelectResourceById(resContent.ID) == nil {
+		t.Errorf("expected to find %s by ID", resContent.ID)
+	}
+	if ed.SelectResourceByHref(resMD.Href) == nil {
+		t.Errorf("expected to find %s by href", resMD.Href)
+	}
+
+	// AddSpineItem and RemoveSpineItem
+	if err := ed.AddSpineItem("ch2.xhtml"); err != nil {
+		t.Fatalf("AddSpineItem: %v", err)
+	}
+	if err := ed.RemoveSpineItem("ch2.xhtml"); err != nil {
+		t.Fatalf("RemoveSpineItem: %v", err)
+	}
+
+	// SaveByte alias
+	var b []byte
+	if err := ed.SaveByte(&b); err != nil {
+		t.Fatalf("SaveByte: %v", err)
+	}
+	if len(b) == 0 {
+		t.Error("expected non-empty byte slice from SaveByte")
+	}
+}
+
+func TestEditor_ErrorBranches(t *testing.T) {
+	sampleBytes := createSampleEpub(t)
+	r, err := NewReader(sampleBytes)
+	if err != nil {
+		t.Fatalf("NewReader: %v", err)
+	}
+
+	ed, err := r.Edit()
+	if err != nil {
+		t.Fatalf("Edit(): %v", err)
+	}
+
+	// Save(nil)
+	if err := ed.Save(nil); err == nil {
+		t.Error("expected error on Save(nil)")
+	}
+
+	// WriteBytes(nil)
+	if err := ed.WriteBytes(nil); err == nil {
+		t.Error("expected error on WriteBytes(nil)")
+	}
+
+	// SelectPackageRendition non-existent
+	if err := ed.SelectPackageRendition("non-existent-rendition"); err == nil {
+		t.Error("expected error on non-existent rendition")
+	}
+
+	// RemoveResource non-existent
+	if err := ed.RemoveResource("completely-bogus-resource"); err == nil {
+		t.Error("expected error on RemoveResource with non-existent ID")
+	}
+
+	// RemoveSpineItem non-existent
+	if err := ed.RemoveSpineItem("completely-bogus-spine"); err == nil {
+		t.Error("expected error on RemoveSpineItem with non-existent ID")
+	}
+
+	// AddSpineItem non-existent
+	if err := ed.AddSpineItem("completely-bogus-spine"); err == nil {
+		t.Error("expected error on AddSpineItem with non-existent ID")
+	}
+
+	// AddContentFile non-existent
+	if _, err := ed.AddContentFile("non-existent-file-path.xhtml"); err == nil {
+		t.Error("expected error on missing content file")
+	}
+
+	// AddMarkdownFile non-existent
+	if _, err := ed.AddMarkdownFile("non-existent-file-path.md"); err == nil {
+		t.Error("expected error on missing markdown file")
+	}
+
+	// AddImageFile non-existent
+	if _, err := ed.AddImageFile("non-existent-file-path.png"); err == nil {
+		t.Error("expected error on missing image file")
+	}
+
+	// CoverFile non-existent
+	if err := ed.CoverFile("non-existent-file-path.png"); err == nil {
+		t.Error("expected error on missing cover file")
 	}
 }
 
