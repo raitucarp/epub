@@ -2,6 +2,7 @@ package epub
 
 import (
 	"encoding/xml"
+	"errors"
 	"slices"
 	"strconv"
 	"strings"
@@ -131,3 +132,14 @@ func NewReader(b []byte) (reader Reader, err error) {
 
 	return newReaderFromZip(zipContainer)
 }
+
+// Edit creates an Editor instance from this Reader, allowing modification of
+// metadata, resources, spine order, and content before writing back to disk or memory.
+func (r *Reader) Edit() (*Editor, error) {
+	if r == nil || r.epub == nil || r.epub.zipContainer == nil {
+		return nil, errors.New("epub: reader is nil or uninitialized")
+	}
+
+	return newEditor(r)
+}
+

@@ -27,6 +27,33 @@ func (z *OCFZipContainer) AddFile(filePath string, content []byte) {
 	z.files[filePath] = content
 }
 
+// RemoveFile removes the file at filePath from the container.
+func (z *OCFZipContainer) RemoveFile(filePath string) {
+	delete(z.files, filePath)
+}
+
+// Clone creates an independent copy of the OCF ZIP container.
+func (z *OCFZipContainer) Clone() *OCFZipContainer {
+	if z == nil {
+		return nil
+	}
+	clonedFiles := make(map[string][]byte, len(z.files))
+	for k, v := range z.files {
+		data := make([]byte, len(v))
+		copy(data, v)
+		clonedFiles[k] = data
+	}
+	cloned := &OCFZipContainer{
+		files:   clonedFiles,
+		metaInf: z.metaInf,
+	}
+	if len(z.metaInf.container.RootFiles.RootFile) > 0 {
+		cloned.metaInf.container.RootFiles.RootFile = make([]RootFile, len(z.metaInf.container.RootFiles.RootFile))
+		copy(cloned.metaInf.container.RootFiles.RootFile, z.metaInf.container.RootFiles.RootFile)
+	}
+	return cloned
+}
+
 // AddMimeType adds the required mimetype file to the container.
 func (z *OCFZipContainer) AddMimeType() {
 	z.AddFile("mimetype", []byte(MimeType))
