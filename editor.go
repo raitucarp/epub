@@ -664,6 +664,26 @@ func (e *Editor) AddContentFile(name string) (PublicationResource, error) {
 	return e.AddContent(filepath.Base(name), data)
 }
 
+// AddMarkdown converts content from Markdown to compliant XHTML and adds it to the
+// publication as a spine content document. The file extension is automatically converted to .xhtml.
+func (e *Editor) AddMarkdown(filename string, content []byte) (PublicationResource, error) {
+	doc, err := markdownToXHTML(content)
+	if err != nil {
+		return PublicationResource{}, err
+	}
+	return e.AddContent(replaceExt(filename, ".xhtml"), []byte(doc.body))
+}
+
+// AddMarkdownFile reads the Markdown file at name from disk, converts it to compliant XHTML,
+// and adds it to the publication as a spine content document.
+func (e *Editor) AddMarkdownFile(name string) (PublicationResource, error) {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return PublicationResource{}, err
+	}
+	return e.AddMarkdown(filepath.Base(name), data)
+}
+
 // AddImage adds an image resource to the publication manifest and container.
 func (e *Editor) AddImage(name string, content []byte) (PublicationResource, error) {
 	mimeType := http.DetectContentType(content)

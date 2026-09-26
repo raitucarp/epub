@@ -1,8 +1,10 @@
 package epub_test
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"strings"
 	"time"
 
 	"github.com/raitucarp/epub"
@@ -32,6 +34,49 @@ func ExampleNew() {
 	if err := w.Write("book.epub"); err != nil {
 		panic(err)
 	}
+}
+
+// ExampleWriter demonstrates creating an EPUB publication, adding chapters,
+// configuring metadata and navigation, and producing the binary archive.
+func ExampleWriter() {
+	w := epub.New("urn:isbn:9780000000001")
+	w.Title("Adventures in Go")
+	w.Author("Jane Doe")
+	w.Languages("en")
+	w.Description("A complete guide to building software with Go.")
+
+	w.AddContent("chapter-1.xhtml", sampleChapter("Chapter 1: The Beginning"))
+	w.AddContent("chapter-2.xhtml", sampleChapter("Chapter 2: Concurrency"))
+
+	if err := w.TableOfContents("toc", epub.TOC{
+		Title: "Table of Contents",
+		Items: []epub.TOC{
+			{Title: "Chapter 1", Href: "chapter-1.xhtml"},
+			{Title: "Chapter 2", Href: "chapter-2.xhtml"},
+		},
+	}); err != nil {
+		panic(err)
+	}
+
+	data, err := w.WriteBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	// Verify publication was generated
+	book, err := epub.NewReader(data)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(strings.Join(book.Title(), ", "))
+	fmt.Println(strings.Join(book.Author(), ", "))
+	fmt.Println("Chapters in Spine:", len(book.Spine()))
+
+	// Output:
+	// Adventures in Go
+	// Jane Doe
+	// Chapters in Spine: 2
 }
 
 // ExampleWriter_Title demonstrates setting a title with an additional subtitle.

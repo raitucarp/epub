@@ -33,6 +33,33 @@ func ExampleNewReader() {
 	// urn:example:sample
 }
 
+// ExampleReader demonstrates inspecting metadata, spine reading order, and table of contents
+// from an opened EPUB publication.
+func ExampleReader() {
+	book, err := epub.NewReader(buildSampleBook())
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Title:", strings.Join(book.Title(), ", "))
+	fmt.Println("Author:", strings.Join(book.Author(), ", "))
+	fmt.Println("Language:", strings.Join(book.Language(), ", "))
+	fmt.Println("Spine Items:", len(book.Spine()))
+
+	toc, err := book.TableOfContents()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("TOC Entries:", len(toc.Items))
+
+	// Output:
+	// Title: The Sample Book
+	// Author: Jane Doe
+	// Language: en
+	// Spine Items: 2
+	// TOC Entries: 2
+}
+
 // ExampleReader_Title demonstrates reading every title declared in the package
 // metadata.
 func ExampleReader_Title() {
@@ -231,6 +258,29 @@ func ExampleReader_TableOfContents() {
 	// Table of Contents
 	// - Chapter 1 -> chapter-1.xhtml
 	// - Chapter 2 -> chapter-2.xhtml
+}
+
+// ExampleTOC demonstrates inspecting the hierarchical navigation structure of an EPUB.
+func ExampleTOC() {
+	book, err := epub.NewReader(buildSampleBook())
+	if err != nil {
+		panic(err)
+	}
+
+	toc, err := book.TableOfContents()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%s (%d entries)\n", toc.Title, len(toc.Items))
+	for _, item := range toc.Items {
+		fmt.Printf("  • %s => %s\n", item.Title, item.Href)
+	}
+
+	// Output:
+	// Table of Contents (2 entries)
+	//   • Chapter 1 => chapter-1.xhtml
+	//   • Chapter 2 => chapter-2.xhtml
 }
 
 // ExampleTOC_JSON demonstrates serializing the table of contents to JSON.

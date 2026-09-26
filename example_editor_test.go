@@ -10,6 +10,49 @@ import (
 	"github.com/raitucarp/epub"
 )
 
+// ExampleEditor demonstrates loading an existing EPUB publication, editing its
+// metadata using fluent method chaining, appending new content, and saving the result.
+func ExampleEditor() {
+	// Start with an existing publication
+	r, err := epub.NewReader(buildSampleBook())
+	if err != nil {
+		panic(err)
+	}
+
+	// Switch from Reader to Editor mode
+	editor, err := r.Edit()
+	if err != nil {
+		panic(err)
+	}
+
+	// Chain metadata modifications
+	editor.Title("The Sample Book (Second Edition)").
+		Author("Jane Doe", "John Smith").
+		Subject("Software Engineering", "Go").
+		Publisher("Tech Publishing").
+		Language("en")
+
+	// Append a new chapter
+	if _, err := editor.AddContent("chapter-3.xhtml", sampleChapter("Chapter 3")); err != nil {
+		panic(err)
+	}
+
+	// Switch back to Reader mode in memory to verify
+	updatedReader, err := editor.Reader()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(strings.Join(updatedReader.Title(), ", "))
+	fmt.Println(strings.Join(updatedReader.Author(), ", "))
+	fmt.Println("Total Spine Items:", len(updatedReader.Spine()))
+
+	// Output:
+	// The Sample Book (Second Edition)
+	// Jane Doe, John Smith
+	// Total Spine Items: 3
+}
+
 // ExampleReader_Edit demonstrates how to read an existing EPUB publication,
 // edit its metadata using concise chained methods, and save the result to a byte slice.
 func ExampleReader_Edit() {
@@ -206,4 +249,52 @@ func ExampleEditor_Reader() {
 	// Final Published Book
 	// Jane Doe, PhD
 }
+
+// ExampleEditor_WriteBytes demonstrates writing edited EPUB bytes into an existing buffer pointer.
+func ExampleEditor_WriteBytes() {
+	r, _ := epub.NewReader(buildSampleBook())
+	editor, _ := r.Edit()
+
+	editor.Title("Buffer Output Edition")
+
+	var output []byte
+	if err := editor.WriteBytes(&output); err != nil {
+		panic(err)
+	}
+
+	updatedReader, _ := epub.NewReader(output)
+	fmt.Println(strings.Join(updatedReader.Title(), ", "))
+
+	// Output:
+	// Buffer Output Edition
+}
+
+// ExampleEditor_AddMarkdown demonstrates appending a Markdown chapter directly to an existing EPUB.
+func ExampleEditor_AddMarkdown() {
+	r, _ := epub.NewReader(buildSampleBook())
+	editor, _ := r.Edit()
+
+	// Append Markdown content
+	md := `# Appendix
+
+This appendix was appended in Markdown!
+
+- Item 1
+- Item 2
+`
+	res, err := editor.AddMarkdown("appendix.md", []byte(md))
+	if err != nil {
+		panic(err)
+	}
+
+	updatedReader, _ := editor.Reader()
+	fmt.Println("New resource href:", res.Href)
+	fmt.Println("Total spine items:", len(updatedReader.Spine()))
+
+	// Output:
+	// New resource href: appendix.xhtml
+	// Total spine items: 3
+}
+
+
 
