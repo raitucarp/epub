@@ -1,0 +1,45 @@
+baseURL = 'https://epub.raitucarp.name/'
+defaultContentLanguage = 'en'
+title = 'epub — Go Library for Reading, Writing & Editing EPUB Publications'
+
+[params]
+  description = 'High-performance, idiomatic Go library for reading, creating, and editing EPUB 2 and EPUB 3 publications.'
+  author = 'Raitucarp'
+  github = 'https://github.com/raitucarp/epub'
+  godoc = 'https://pkg.go.dev/github.com/raitucarp/epub'
+  kofi = 'https://ko-fi.com/raitucarp'
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    style = 'github-dark'
+    guessSyntax = true
+    lineNos = false
+
+[menu]
+  [[menu.main]]
+    name = 'Getting Started'
+    url = '/getting-started/'
+    weight = 10
+  [[menu.main]]
+    name = 'Guides'
+    url = '/guides/'
+    weight = 20
+  [[menu.main]]
+    name = 'Showcase Book'
+    url = '/showcase/'
+    weight = 30
+  [[menu.main]]
+    name = 'API'
+    url = 'https://pkg.go.dev/github.com/raitucarp/epub'
+    weight = 40
+  [[menu.main]]
+    name = 'GitHub'
+    url = 'https://github.com/raitucarp/epub'
+    weight = 50
+  [[menu.main]]
+    name = 'Support (Ko-fi)'
+    url = 'https://ko-fi.com/raitucarp'
+    weight = 60

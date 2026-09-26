@@ -1,0 +1,22 @@
+{{ define "main" }}
+<article>
+  <h1>{{ .Title }}</h1>
+  {{ with .Description }}
+  <p class="description" style="font-size: 1.15rem; color: var(--text-muted); margin-bottom: 2rem;">{{ . }}</p>
+  {{ end }}
+  {{ .Content }}
+
+  {{ if .Pages }}
+  <div class="cards-grid" style="margin-top: 2rem;">
+    {{ range .Pages }}
+    <div class="card">
+      <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+      {{ with .Description }}
+      <p>{{ . }}</p>
+      {{ end }}
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

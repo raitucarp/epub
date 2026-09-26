@@ -1,16 +1,21 @@
 # epub
 
-`epub` is a Go library for reading and writing [EPUB](https://www.w3.org/TR/epub-33/)
-publications. It implements the EPUB 3.3 specification, including the Open
-Container Format (OCF), the package document, the EPUB navigation document, and
-the legacy NCX format used by EPUB 2.
+[![Go Reference](https://pkg.go.dev/badge/github.com/raitucarp/epub.svg)](https://pkg.go.dev/github.com/raitucarp/epub)
+[![CI](https://github.com/raitucarp/epub/actions/workflows/ci.yml/badge.svg)](https://github.com/raitucarp/epub/actions/workflows/ci.yml)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/raitucarp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 
-The library provides two main entry points:
+`epub` is a high-performance, developer-friendly Go library for reading, writing, and editing [EPUB](https://www.w3.org/TR/epub-33/) publications. It implements the EPUB 3.3 specification, including the Open Container Format (OCF), package documents, EPUB navigation documents (NAV), and the legacy NCX format used by EPUB 2.
 
-- [`Reader`](https://pkg.go.dev/github.com/raitucarp/epub#Reader) for inspecting
-  the metadata, resources, navigation, and content of an existing publication.
-- [`Writer`](https://pkg.go.dev/github.com/raitucarp/epub#Writer) for building
-  new publications, including from Markdown sources.
+Documentation is available at **[epub.raitucarp.name](https://epub.raitucarp.name)**.
+
+The library provides three main entry points:
+
+- [`Reader`](https://pkg.go.dev/github.com/raitucarp/epub#Reader) for inspecting metadata, resources, navigation, spine order, and converting content documents to Markdown.
+- [`Writer`](https://pkg.go.dev/github.com/raitucarp/epub#Writer) for building new publications from scratch, including from Markdown manuscripts.
+- [`Editor`](https://pkg.go.dev/github.com/raitucarp/epub#Editor) for mutating existing publications in place with concise fluent chaining (`reader.Edit()`).
+
+---
 
 ## Installation
 
@@ -20,9 +25,11 @@ go get github.com/raitucarp/epub
 
 Requires Go 1.25 or later.
 
+---
+
 ## Quick start
 
-### Read an EPUB
+### 1. Read an EPUB
 
 ```go
 book, err := epub.OpenReader("book.epub")
@@ -35,12 +42,13 @@ fmt.Println("Author:", strings.Join(book.Author(), ", "))
 fmt.Println("Language:", strings.Join(book.Language(), ", "))
 fmt.Println("Identifier:", book.UID())
 
+// Convert content documents directly to clean Markdown!
 for _, id := range book.ListContentDocumentIds() {
     fmt.Println(book.ReadContentMarkdownById(id))
 }
 ```
 
-### Write an EPUB
+### 2. Write an EPUB
 
 ```go
 w := epub.New("urn:isbn:9780000000001")
@@ -63,7 +71,45 @@ if err := w.Write("book.epub"); err != nil {
 }
 ```
 
-### Write an EPUB from Markdown
+### 3. Edit an Existing EPUB
+
+```go
+reader, err := epub.OpenReader("book.epub")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Enter edit mode
+editor, err := reader.Edit()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Concise fluent method chaining
+editor.Title("A Book (Second Edition)").
+    Author("Jane Doe, PhD").
+    Description("Revised edition with new notes.")
+
+// Add or update chapters
+editor.AddContent("chapter-2.xhtml", []byte(`<h1>Chapter 2</h1><p>Continuing the journey...</p>`))
+
+// Save in one of three ways:
+// 1. Direct to file
+editor.SaveAs("book-v2.epub")
+
+// 2. Stream to any io.Writer
+var buf bytes.Buffer
+editor.Save(&buf)
+
+// 3. Populate a byte slice directly
+var b []byte
+editor.WriteBytes(&b)
+
+// 4. Or transition back to Reader mode in memory:
+readerBack, err := editor.Reader()
+```
+
+### 4. Write an EPUB from Markdown
 
 A single Markdown document can be converted directly:
 
@@ -77,8 +123,7 @@ if _, err := w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nOnce upon a ti
 }
 ```
 
-Or an entire directory of Markdown files can be assembled, with the table of
-contents derived from the headings in each file:
+Or an entire directory of Markdown files can be assembled, with the table of contents automatically derived from the headings:
 
 ```go
 w := epub.New("urn:isbn:9780000000001")
@@ -95,9 +140,7 @@ if err := w.Write("book.epub"); err != nil {
 }
 ```
 
-`AddMarkdownDirectory` reads every `.md` and `.markdown` file in the directory,
-adds them to the spine in file-name order, and builds a nested table of
-contents from the `h1` through `h6` headings found in each document.
+---
 
 ## Reading
 
@@ -162,20 +205,7 @@ for _, item := range toc.Items {
 json, _ := toc.JSON()              // serialized table of contents
 ```
 
-### Multiple renditions
-
-Some publications ship more than one package document, for example a reflowable
-and a fixed-layout rendition of the same content.
-
-```go
-for _, rendition := range book.ListRenditions() {
-    fmt.Println(rendition)
-}
-
-book.SelectPackageRendition("pre-paginated")
-book.CurrentSelectedPackage()      // *pkg.Package
-book.CurrentSelectedPackagePath()  // path to the active package document
-```
+---
 
 ## Writing
 
@@ -191,7 +221,6 @@ w.Creator("creator-id", "Jane Doe")
 w.Contributor("editor", "John Editor")
 w.Languages("en")
 w.Description("A short description")
-w.LongDescription("A longer description")
 w.Publisher("Example Press")
 w.Subject("subject-id", "Fiction")
 w.Rights("All rights reserved")
@@ -212,14 +241,6 @@ w.CoverJPG(img)                                  // image.Image as JPEG
 w.CoverFile("cover.png")
 ```
 
-### Markdown
-
-```go
-w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nText.\n"))
-w.AddMarkdownFile("chapter-1.md")
-w.AddMarkdownDirectory("manuscript")
-```
-
 ### Table of contents
 
 ```go
@@ -234,12 +255,32 @@ toc := epub.TOC{
 w.TableOfContents("toc", toc)
 ```
 
-### Writing to disk or memory
+---
+
+## Editing
 
 ```go
-w.Write("book.epub")        // write to a file
-data, err := w.WriteBytes() // write to an in-memory byte slice
+editor, err := reader.Edit()
+
+// Mutate metadata
+editor.Title("Updated Title").
+    Author("New Author").
+    Language("en").
+    Subject("Adventure", "Classics")
+
+// Modify or inject content
+editor.AddContent("text/extra.xhtml", contentBytes)
+editor.UpdateContent("text/chapter-1.xhtml", updatedContentBytes)
+editor.RemoveResource("text/obsolete.xhtml")
+
+// Switch back to reader mode or save
+readerBack, _ := editor.Reader()
+editor.SaveAs("final.epub")
+editor.Save(ioWriter)
+editor.WriteBytes(&byteSlice)
 ```
+
+---
 
 ## Supported media types
 
@@ -249,22 +290,40 @@ data, err := w.WriteBytes() // write to an in-memory byte slice
 - Images: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`
 - Fonts: `font/ttf`, `font/otf`, `font/woff`, `font/woff2`
 
+---
+
 ## Examples
 
-Runnable programs live under [`./examples`](./examples):
+Runnable example programs live under [`./examples`](./examples):
 
-- [`read`](./examples/read) reads an EPUB file and prints its metadata and content.
-- [`write`](./examples/write) builds a minimal EPUB from XHTML.
-- [`markdown`](./examples/markdown) builds an EPUB from a directory of Markdown files.
+- [`./examples/read`](./examples/read): Inspecting metadata, extracting covers, reading the spine order, and converting content documents to Markdown.
+- [`./examples/edit`](./examples/edit): In-place editing of metadata, updating chapters, switching back to reader with `editor.Reader()`, and saving.
+- [`./examples/write/basic`](./examples/write/basic): Minimal clean EPUB creation.
+- [`./examples/write/with_cover`](./examples/write/with_cover): Adding PNG and JPEG cover art.
+- [`./examples/write/multiple_chapters_and_assets`](./examples/write/multiple_chapters_and_assets): Multi-chapter books with images and SVG diagrams.
+- [`./examples/write/nested_toc_and_guide`](./examples/write/nested_toc_and_guide): Hierarchical TOC and landmarks/guide references.
+- [`./examples/write/markdown`](./examples/write/markdown): Compiling books from Markdown.
+- [`./examples/write/advanced_multilingual_rtl`](./examples/write/advanced_multilingual_rtl): Multilingual publications with Right-To-Left (RTL) progression.
+- [`./examples/write/reconstruct_standardebooks`](./examples/write/reconstruct_standardebooks): Reading and reconstructing production literature from Standard Ebooks.
 
-The package also includes [Godoc examples](https://pkg.go.dev/github.com/raitucarp/epub#pkg-examples)
-that progress from a basic write/read round-trip to a Markdown-driven build and
-a read-modify-write workflow.
+---
 
 ## Documentation
 
-The full API reference is available on
-[pkg.go.dev](https://pkg.go.dev/github.com/raitucarp/epub).
+- **Documentation Website**: [epub.raitucarp.name](https://epub.raitucarp.name)
+- **GoDoc Reference**: [pkg.go.dev/github.com/raitucarp/epub](https://pkg.go.dev/github.com/raitucarp/epub)
+
+---
+
+## Support
+
+If you find this project helpful or use it in your applications, consider supporting its maintenance and development:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20raitucarp-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/raitucarp)
+
+You can support the creator directly at **[ko-fi.com/raitucarp](https://ko-fi.com/raitucarp)**. Every coffee is greatly appreciated!
+
+---
 
 ## Contributing
 
@@ -276,6 +335,8 @@ git config core.hooksPath .githooks
 go test ./...
 ```
 
+---
+
 ## License
 
-[MIT](./LICENSE.md)
+[MIT](./LICENSE.md) © [Raitucarp](https://github.com/raitucarp)

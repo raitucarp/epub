@@ -1,0 +1,38 @@
+{{ define "main" }}
+<div class="hero" style="padding: 1.5rem 0 2.5rem 0;">
+  <h1 style="font-size: 2.75rem; margin-bottom: 0.75rem;">Fast, Modern EPUB Library for Go</h1>
+  <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 680px; margin-bottom: 1.5rem;">
+    A zero-bloat, spec-compliant Go package for reading, creating, and editing EPUB 2 and EPUB 3 publications with outstanding Developer Experience.
+  </p>
+  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <a href="{{ "getting-started/quickstart/" | relURL }}" class="btn-nav" style="background: var(--accent); color: #fff; border-color: var(--accent);">Get Started →</a>
+    <a href="{{ "showcase/" | relURL }}" class="btn-nav">Browse Showcase Book 📚</a>
+    <a href="https://github.com/raitucarp/epub" target="_blank" class="btn-nav">GitHub</a>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <div class="card">
+    <h3>📖 Reading & Inspection</h3>
+    <p>Read metadata, extract covers, traverse Table of Contents hierarchies, inspect spines, and convert XHTML content directly to clean Markdown.</p>
+    <a href="{{ "guides/reading/" | relURL }}">Read Guide →</a>
+  </div>
+  <div class="card">
+    <h3>✍️ Building & Writing</h3>
+    <p>Construct compliant EPUB 3 publications from scratch with automatic TOC generation, covers, images, CSS, SVG, and Markdown compilation.</p>
+    <a href="{{ "guides/writing/" | relURL }}">Write Guide →</a>
+  </div>
+  <div class="card">
+    <h3>⚡ Fluent In-place Editing</h3>
+    <p>Mutate existing EPUB files with concise chaining: <code>reader.Edit()</code>, modify titles, chapters, covers, and save with <code>SaveAs</code>, <code>Save</code>, or <code>WriteBytes</code>.</p>
+    <a href="{{ "guides/editing/" | relURL }}">Edit Guide →</a>
+  </div>
+  <div class="card">
+    <h3>🏛️ Standard Ebooks Ready</h3>
+    <p>Battle-tested on complex real-world EPUBs from Standard Ebooks, W3C test suites, multiple renditions, and font obfuscation algorithms.</p>
+    <a href="{{ "guides/standards/" | relURL }}">Standards Guide →</a>
+  </div>
+</div>
+
+{{ .Content }}
+{{ end }}

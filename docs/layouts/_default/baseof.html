@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ if .Title }}{{ .Title }} · {{ end }}{{ .Site.Title }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+  <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <a href="{{ .Site.BaseURL }}" class="brand-title">
+        <span>📖 epub</span>
+        <span class="brand-badge">v0.1.0</span>
+      </a>
+      <nav class="main-nav">
+        {{ range .Site.Menus.main }}
+        <a href="{{ .URL }}" target="{{ if hasPrefix .URL "http" }}_blank{{ else }}_self{{ end }}">{{ .Name }}</a>
+        {{ end }}
+      </nav>
+    </div>
+  </header>
+
+  <div class="layout-container">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Getting Started</div>
+        <ul class="sidebar-links">
+          <li><a href="{{ "getting-started/" | relURL }}" class="{{ if eq .RelPermalink "/getting-started/" }}active{{ end }}">Overview</a></li>
+          <li><a href="{{ "getting-started/installation/" | relURL }}" class="{{ if eq .RelPermalink "/getting-started/installation/" }}active{{ end }}">Installation</a></li>
+          <li><a href="{{ "getting-started/quickstart/" | relURL }}" class="{{ if eq .RelPermalink "/getting-started/quickstart/" }}active{{ end }}">Quickstart</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Guides</div>
+        <ul class="sidebar-links">
+          <li><a href="{{ "guides/reading/" | relURL }}" class="{{ if eq .RelPermalink "/guides/reading/" }}active{{ end }}">Reading EPUBs</a></li>
+          <li><a href="{{ "guides/writing/" | relURL }}" class="{{ if eq .RelPermalink "/guides/writing/" }}active{{ end }}">Creating EPUBs</a></li>
+          <li><a href="{{ "guides/editing/" | relURL }}" class="{{ if eq .RelPermalink "/guides/editing/" }}active{{ end }}">Editing EPUBs (reader.Edit)</a></li>
+          <li><a href="{{ "guides/markdown/" | relURL }}" class="{{ if eq .RelPermalink "/guides/markdown/" }}active{{ end }}">Markdown Compilation</a></li>
+          <li><a href="{{ "guides/standards/" | relURL }}" class="{{ if eq .RelPermalink "/guides/standards/" }}active{{ end }}">Standard Ebooks Recipe</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Showcase</div>
+        <ul class="sidebar-links">
+          <li><a href="{{ "showcase/" | relURL }}" class="{{ if eq .RelPermalink "/showcase/" }}active{{ end }}">The White Company</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Community & Support</div>
+        <ul class="sidebar-links">
+          <li><a href="https://github.com/raitucarp/epub" target="_blank">GitHub Repository ↗</a></li>
+          <li><a href="https://pkg.go.dev/github.com/raitucarp/epub" target="_blank">GoDoc Reference ↗</a></li>
+          <li><a href="https://ko-fi.com/raitucarp" target="_blank">☕ Support on Ko-fi ↗</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="content">
+        {{ block "main" . }}{{ end }}
+      </div>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p>&copy; {{ now.Year }} <a href="https://github.com/raitucarp">Raitucarp</a>. Open source under the MIT License.</p>
+    <p style="margin-top: 0.5rem;">Documentation deployed at <a href="https://epub.raitucarp.name">epub.raitucarp.name</a> · If you love this project, consider <a href="https://ko-fi.com/raitucarp">buying a coffee on Ko-fi</a>!</p>
+  </footer>
+</body>
+</html>
