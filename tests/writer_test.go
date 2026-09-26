@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -24,6 +25,11 @@ func TestCreateEpubWithoutRequiredFieldShouldFail(t *testing.T) {
 }
 
 func TestCreateEpubSuccess(t *testing.T) {
+	if err := os.MkdirAll("./temp", 0o755); err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll("./temp")
+
 	epubData, err := epub.OpenReader("./data/arthur-conan-doyle_the-white-company.epub")
 	if err != nil {
 		t.Errorf("Something error %s", err)
