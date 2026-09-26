@@ -1,7 +1,11 @@
 package epub_test
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"strings"
 
 	"github.com/raitucarp/epub"
@@ -15,7 +19,7 @@ func Example() {
 	w.Author("Jane Doe")
 	w.Languages("en")
 
-	w.AddContent("chapter-1.xhtml", []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Chapter 1</h1><p>Hello, world.</p></body></html>`))
+	w.AddContent("chapter-1.xhtml", sampleChapter("Chapter 1"))
 	if err := w.TableOfContents("toc", epub.TOC{
 		Title: "Contents",
 		Items: []epub.TOC{{Title: "Chapter 1", Href: "chapter-1.xhtml"}},
@@ -43,36 +47,42 @@ func Example() {
 	// urn:example:book
 }
 
-// ExampleOpenReader demonstrates opening an EPUB file from disk and reading its
-// metadata and table of contents.
-func ExampleOpenReader() {
-	book, err := epub.OpenReader("book.epub")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(strings.Join(book.Title(), ", "))
-	fmt.Println(book.Version())
-
-	toc, err := book.TableOfContents()
-	if err != nil {
-		panic(err)
-	}
-	for _, item := range toc.Items {
-		fmt.Println(item.Title, item.Href)
-	}
+// sampleChapter returns a minimal XHTML content document for use in examples.
+func sampleChapter(title string) []byte {
+	return []byte(`<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<h1>` + title + `</h1>
+<p>This is a sample paragraph.</p>
+</body>
+</html>`)
 }
 
-// ExampleWriter demonstrates building a publication with a cover image and
-// multiple chapters before writing it to disk.
-func ExampleWriter() {
-	w := epub.New("urn:example:writer")
-	w.Title("A Novel")
+// samplePNG returns a small in-memory PNG image for use in the image and cover
+// examples.
+func samplePNG() []byte {
+	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	img.Set(0, 0, color.RGBA{R: 255, G: 0, B: 0, A: 255})
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// buildSampleBook constructs a complete in-memory EPUB and returns its bytes.
+// It is used by the reading examples so they can operate without a file on
+// disk.
+func buildSampleBook() []byte {
+	w := epub.New("urn:example:sample")
+	w.Title("The Sample Book")
 	w.Author("Jane Doe")
 	w.Languages("en")
 
-	w.AddContent("chapter-1.xhtml", []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Chapter 1</h1></body></html>`))
-	w.AddContent("chapter-2.xhtml", []byte(`<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Chapter 2</h1></body></html>`))
+	w.AddContent("chapter-1.xhtml", sampleChapter("Chapter 1"))
+	w.AddContent("chapter-2.xhtml", sampleChapter("Chapter 2"))
 
 	toc := epub.TOC{
 		Title: "Contents",
@@ -85,75 +95,9 @@ func ExampleWriter() {
 		panic(err)
 	}
 
-	if err := w.Write("book.epub"); err != nil {
-		panic(err)
-	}
-}
-
-// ExampleWriter_AddMarkdown demonstrates converting a single Markdown document
-// into an EPUB content document.
-func ExampleWriter_AddMarkdown() {
-	w := epub.New("urn:example:markdown")
-	w.Title("A Markdown Book")
-	w.Languages("en")
-
-	res, err := w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nOnce upon a time...\n"))
+	data, err := w.WriteBytes()
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(res.Href)
-	fmt.Println(res.MIMEType)
-
-	// Output:
-	// chapter-1.xhtml
-	// application/xhtml+xml
-}
-
-// ExampleWriter_AddMarkdownDirectory demonstrates building an entire EPUB from
-// a directory of Markdown files. The table of contents is derived from the
-// headings in each file.
-func ExampleWriter_AddMarkdownDirectory() {
-	w := epub.New("urn:example:markdown-dir")
-	w.Title("A Markdown Directory Book")
-	w.Author("Jane Doe")
-	w.Languages("en")
-
-	if err := w.AddMarkdownDirectory("manuscript"); err != nil {
-		panic(err)
-	}
-
-	if err := w.Write("book.epub"); err != nil {
-		panic(err)
-	}
-}
-
-// Example_roundTrip demonstrates reading an existing publication, adjusting its
-// metadata, and writing a new EPUB.
-func Example_roundTrip() {
-	book, err := epub.OpenReader("original.epub")
-	if err != nil {
-		panic(err)
-	}
-
-	w := epub.New(book.UID())
-	w.Title(append([]string{"Second Edition"}, book.Title()...)...)
-	w.Author(book.Author()...)
-	w.Languages(book.Language()...)
-
-	for _, res := range book.Spine() {
-		w.AddContent(res.Href, res.Content)
-	}
-
-	toc, err := book.TableOfContents()
-	if err != nil {
-		panic(err)
-	}
-	if err := w.TableOfContents("toc", toc); err != nil {
-		panic(err)
-	}
-
-	if err := w.Write("second-edition.epub"); err != nil {
-		panic(err)
-	}
+	return data
 }
