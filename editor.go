@@ -1056,6 +1056,11 @@ func (e *Editor) SaveAs(filename string) error {
 	return os.WriteFile(filename, data, 0o644)
 }
 
+// Write writes the edited EPUB archive to the specified file on disk (alias for SaveAs).
+func (e *Editor) Write(filename string) error {
+	return e.SaveAs(filename)
+}
+
 // WriteBytes writes the edited EPUB bytes into the byte slice pointed to by b.
 func (e *Editor) WriteBytes(b *[]byte) error {
 	if b == nil {

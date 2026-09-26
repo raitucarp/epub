@@ -483,6 +483,17 @@ func detectContentMediaType(filename string, content []byte) string {
 	}
 }
 
+// AddResource adds an arbitrary resource (such as a stylesheet, font, or asset)
+// to the publication manifest and container.
+func (w *Writer) AddResource(id, href, mimeType string, properties pkg.ManifestProperty, content []byte) (PublicationResource, error) {
+	if id == "" {
+		id = filepath.Base(href)
+	}
+	filePath := path.Join(w.contentDir, href)
+	res := w.addResource(id, filePath, href, properties, mimeType, content)
+	return res, nil
+}
+
 func (w *Writer) addResource(
 	id string,
 	filePath string,

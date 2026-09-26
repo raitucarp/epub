@@ -58,6 +58,7 @@ func main() {
 	fmt.Println("  - examples/write/multiple_chapters_and_assets")
 	fmt.Println("  - examples/write/nested_toc_and_guide")
 	fmt.Println("  - examples/write/markdown")
+	fmt.Println("  - examples/write/directory_with_metadata")
 	fmt.Println("  - examples/write/advanced_multilingual_rtl")
 	fmt.Println("  - examples/write/reconstruct_standardebooks")
 }

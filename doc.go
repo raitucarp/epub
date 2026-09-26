@@ -134,23 +134,30 @@
 //	// Target D: Seamlessly switch back to Reader mode in memory
 //	// r, err := editor.Reader()
 //
-// # 4. Markdown Integration
+// # 4. Directory & Markdown Publishing
 //
-// Content documents can be compiled directly from Markdown sources.
-// AddMarkdown converts a single markdown document into compliant XHTML, while
-// AddMarkdownDirectory converts every Markdown file within a folder and extracts
-// headings to construct the table of contents:
+// You can compile entire books directly from directories without manual Go declarations
+// by providing a metadata.yml file.
 //
-//	w := epub.New("urn:isbn:9780000000001")
-//	w.Title("Markdown Collection")
-//	w.Languages("en")
+// For Markdown manuscripts:
 //
-//	// Automatically process all *.md files in the manuscript directory
+//	w := epub.New("")
+//	// Ingests all *.md files, static assets, cover image, and metadata.yml
 //	if err := w.AddMarkdownDirectory("manuscript"); err != nil {
 //		log.Fatal(err)
 //	}
+//	w.Write("book.epub")
 //
-//	w.Write("manuscript.epub")
+// For XHTML/HTML content directories:
+//
+//	w := epub.New("")
+//	// Ingests all *.xhtml files, static assets (css, images, fonts), cover, and metadata.yml
+//	if err := w.AddDirectory("book_sources"); err != nil {
+//		log.Fatal(err)
+//	}
+//	w.Write("book.epub")
+//
+// Both Writer and Editor support AddDirectory and AddMarkdownDirectory.
 //
 // # 5. Advanced Capabilities
 //

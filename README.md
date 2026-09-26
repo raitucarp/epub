@@ -123,17 +123,18 @@ if _, err := w.AddMarkdown("chapter-1.md", []byte("# Chapter 1\n\nOnce upon a ti
 }
 ```
 
-Or an entire directory of Markdown files can be assembled, with the table of contents automatically derived from the headings:
+Or an entire directory of Markdown files or XHTML documents can be compiled directly. Place an optional `metadata.yml` in the folder to configure publication details without writing Go declarations:
 
 ```go
-w := epub.New("urn:isbn:9780000000001")
-w.Title("A Markdown Book")
-w.Author("Jane Doe")
-w.Languages("en")
+w := epub.New("")
 
+// Ingests all Markdown files, static assets, cover image, and metadata.yml
 if err := w.AddMarkdownDirectory("manuscript"); err != nil {
     log.Fatal(err)
 }
+
+// Or for directories containing XHTML files and assets:
+// if err := w.AddDirectory("book_sources"); err != nil { ... }
 
 if err := w.Write("book.epub"); err != nil {
     log.Fatal(err)
@@ -303,6 +304,7 @@ Runnable example programs live under [`./examples`](./examples):
 - [`./examples/write/multiple_chapters_and_assets`](./examples/write/multiple_chapters_and_assets): Multi-chapter books with images and SVG diagrams.
 - [`./examples/write/nested_toc_and_guide`](./examples/write/nested_toc_and_guide): Hierarchical TOC and landmarks/guide references.
 - [`./examples/write/markdown`](./examples/write/markdown): Compiling books from Markdown.
+- [`./examples/write/directory_with_metadata`](./examples/write/directory_with_metadata): Compiling books from a directory with declarative `metadata.yml`.
 - [`./examples/write/advanced_multilingual_rtl`](./examples/write/advanced_multilingual_rtl): Multilingual publications with Right-To-Left (RTL) progression.
 - [`./examples/write/reconstruct_standardebooks`](./examples/write/reconstruct_standardebooks): Reading and reconstructing production literature from Standard Ebooks.
 

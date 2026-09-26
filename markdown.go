@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/raitucarp/epub/pkg"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"golang.org/x/net/html"
@@ -65,47 +66,228 @@ func (w *Writer) AddMarkdownFile(name string) (PublicationResource, error) {
 // AddMarkdownDirectory reads every Markdown file in dir, converts each to an
 // XHTML content document, and adds them to the spine in file-name order. A
 // table of contents is generated from the heading structure of the documents
-// and registered with the publication. The publication identifier, title,
-// author, and language must be set on the Writer before calling Write.
+// and registered with the publication.
+//
+// If metadata.yml (or metadata.yaml, book.yml, book.yaml) is present in dir,
+// publication metadata (title, author, language, identifier, cover, etc.) is
+// automatically configured without requiring manual Go method calls.
+//
+// Static assets (images, stylesheets, fonts) within the directory are also
+// automatically discovered and registered in the publication manifest.
 func (w *Writer) AddMarkdownDirectory(dir string) error {
-	entries, err := os.ReadDir(dir)
+	if _, err := os.Stat(dir); err != nil {
+		return err
+	}
+
+	meta, err := parseMetadataFile(dir)
+	if err != nil {
+		return err
+	}
+	if err := w.applyMetadata(meta, dir); err != nil {
+		return err
+	}
+
+	var mdFiles []string
+	var assetFiles []string
+
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		relPath, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		relSlash := filepath.ToSlash(relPath)
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") {
+			return nil
+		}
+
+		lowerBase := strings.ToLower(base)
+		if lowerBase == "metadata.yml" || lowerBase == "metadata.yaml" || lowerBase == "book.yml" || lowerBase == "book.yaml" {
+			return nil
+		}
+
+		if meta != nil && meta.GetCover() != "" && relSlash == filepath.ToSlash(meta.GetCover()) {
+			return nil
+		}
+		if (meta == nil || meta.GetCover() == "") && (lowerBase == "cover.png" || lowerBase == "cover.jpg" || lowerBase == "cover.jpeg" || lowerBase == "cover.webp") {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		switch ext {
+		case ".md", ".markdown":
+			mdFiles = append(mdFiles, relPath)
+		case ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".css", ".otf", ".ttf", ".woff", ".woff2":
+			assetFiles = append(assetFiles, relPath)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		switch strings.ToLower(filepath.Ext(e.Name())) {
-		case ".md", ".markdown":
-			names = append(names, e.Name())
-		}
-	}
-	sort.Strings(names)
-
-	docs := make([]markdownDocument, 0, len(names))
-	for _, name := range names {
-		data, err := os.ReadFile(filepath.Join(dir, name))
+	sort.Strings(assetFiles)
+	for _, rel := range assetFiles {
+		data, err := os.ReadFile(filepath.Join(dir, rel))
 		if err != nil {
 			return err
 		}
-		_, headings, err := w.addMarkdown(name, data)
+		href := filepath.ToSlash(rel)
+		mimeType := detectMIMEType(rel)
+		if _, err := w.AddResource("", href, mimeType, pkg.NotProperty, data); err != nil {
+			return err
+		}
+	}
+
+	sort.Strings(mdFiles)
+	docs := make([]markdownDocument, 0, len(mdFiles))
+	for _, rel := range mdFiles {
+		data, err := os.ReadFile(filepath.Join(dir, rel))
+		if err != nil {
+			return err
+		}
+		outName := replaceExt(rel, ".xhtml")
+		_, headings, err := w.addMarkdown(outName, data)
 		if err != nil {
 			return err
 		}
 		docs = append(docs, markdownDocument{
-			href:     replaceExt(name, ".xhtml"),
+			href:     outName,
 			headings: headings,
 		})
 	}
 
 	toc := buildMarkdownTOC(docs)
+	if meta != nil {
+		toc.Title = meta.GetTOCTitle()
+	}
 	if len(toc.Items) == 0 {
 		return nil
 	}
 	return w.TableOfContents("toc", toc)
+}
+
+// AddMarkdownDirectory reads every Markdown file in dir, converts each to an
+// XHTML content document, and adds them to the Editor spine in file-name order.
+// A table of contents is generated from the heading structure of the documents.
+//
+// If metadata.yml is present in dir, publication metadata is automatically applied.
+// Static assets (images, stylesheets, fonts) within the directory are also
+// automatically registered in the publication manifest.
+func (e *Editor) AddMarkdownDirectory(dir string) error {
+	if _, err := os.Stat(dir); err != nil {
+		return err
+	}
+
+	meta, err := parseMetadataFile(dir)
+	if err != nil {
+		return err
+	}
+	if err := e.applyMetadata(meta, dir); err != nil {
+		return err
+	}
+
+	var mdFiles []string
+	var assetFiles []string
+
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		relPath, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		relSlash := filepath.ToSlash(relPath)
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") {
+			return nil
+		}
+
+		lowerBase := strings.ToLower(base)
+		if lowerBase == "metadata.yml" || lowerBase == "metadata.yaml" || lowerBase == "book.yml" || lowerBase == "book.yaml" {
+			return nil
+		}
+
+		if meta != nil && meta.GetCover() != "" && relSlash == filepath.ToSlash(meta.GetCover()) {
+			return nil
+		}
+		if (meta == nil || meta.GetCover() == "") && (lowerBase == "cover.png" || lowerBase == "cover.jpg" || lowerBase == "cover.jpeg" || lowerBase == "cover.webp") {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		switch ext {
+		case ".md", ".markdown":
+			mdFiles = append(mdFiles, relPath)
+		case ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".css", ".otf", ".ttf", ".woff", ".woff2":
+			assetFiles = append(assetFiles, relPath)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sort.Strings(assetFiles)
+	for _, rel := range assetFiles {
+		data, err := os.ReadFile(filepath.Join(dir, rel))
+		if err != nil {
+			return err
+		}
+		href := filepath.ToSlash(rel)
+		mimeType := detectMIMEType(rel)
+		if _, err := e.AddResource("", href, mimeType, pkg.NotProperty, data); err != nil {
+			return err
+		}
+	}
+
+	sort.Strings(mdFiles)
+	docs := make([]markdownDocument, 0, len(mdFiles))
+	for _, rel := range mdFiles {
+		data, err := os.ReadFile(filepath.Join(dir, rel))
+		if err != nil {
+			return err
+		}
+		outName := replaceExt(rel, ".xhtml")
+		doc, err := markdownToXHTML(data)
+		if err != nil {
+			return err
+		}
+		if _, err := e.AddContent(outName, []byte(doc.body)); err != nil {
+			return err
+		}
+		docs = append(docs, markdownDocument{
+			href:     outName,
+			headings: doc.headings,
+		})
+	}
+
+	toc := buildMarkdownTOC(docs)
+	if meta != nil {
+		toc.Title = meta.GetTOCTitle()
+	}
+	if len(toc.Items) == 0 {
+		return nil
+	}
+	return e.TableOfContents("toc", toc)
 }
 
 // addMarkdown converts content to XHTML, adds it as a content document, and
