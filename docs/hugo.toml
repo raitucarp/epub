@@ -3,7 +3,7 @@ defaultContentLanguage = 'en'
 title = 'epub — Go Library for Reading, Writing & Editing EPUB Publications'
 
 [params]
-  version = 'v0.5.0'
+  version = 'v0.5.1'
   description = 'High-performance, idiomatic Go library for reading, creating, and editing EPUB 2 and EPUB 3 publications.'
   author = 'Raitucarp'
   github = 'https://github.com/raitucarp/epub'

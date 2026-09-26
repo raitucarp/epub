@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1]
+
+### Documentation & Features
+
+- comprehensive rewrite of package-level GoDoc in `doc.go` with structured Go doc markdown, workflow guides, and practical code snippets
+- add runnable type-level GoDoc examples for `Reader`, `Writer`, `Editor`, and `TOC` with verified output blocks
+- implement `Editor.AddMarkdown` and `Editor.AddMarkdownFile`
+- add `ExampleEditor_WriteBytes` and `ExampleEditor_AddMarkdown` runnable examples
+- modernize documentation website with custom blue palette, dark/light mode switcher, and Merriweather typography
+
 ## [0.5.0]
 
 ### Features
